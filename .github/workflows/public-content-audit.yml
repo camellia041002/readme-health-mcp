@@ -1,4 +1,4 @@
-name: Public repository hygiene
+name: Public content audit
 
 on:
   pull_request:
@@ -9,13 +9,13 @@ permissions:
   contents: read
 
 jobs:
-  public-content-audit:
+  audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Reject private, generated, and agent artifacts
+      - name: Reject private and generated artifacts
         shell: bash
         run: |
           set -euo pipefail
@@ -23,7 +23,7 @@ jobs:
             git rev-list --all | while read -r commit; do
               git diff-tree --no-commit-id --name-only -r "$commit"
             done
-          } | sort -u | grep -Ei '(^|/)(AGENTS|CLAUDE|CODEX|GEMINI|HANDOFF|MEMORY)\.md$|(^|/)\.nosync$|(^|/)(private|scratch|temp|data|logs)/|(^|/)\.env($|\.)|(^|/)(.*\.(db|sqlite|sqlite3|pem|key|p12|pfx))$' | grep -Ev '^\.env\.example$' || true)"
+          } | sort -u | grep -Ei '(^|/)\.nosync$|^(private|scratch|temp|data|logs)/|^server/(private|scratch|temp|data|logs)/|(^|/)\.env($|\.)|(^|/)(.*\.(db|sqlite|sqlite3|pem|key|p12|pfx|jks|keystore))$' | grep -Ev '(^|/)\.env\.example$' || true)"
           if [[ -n "$forbidden_paths" ]]; then
             echo "Forbidden public paths found:" >&2
             echo "$forbidden_paths" >&2

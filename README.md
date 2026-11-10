@@ -1,5 +1,7 @@
 # ReadMe Health MCP
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 ReadMe is a self-hosted, read-only bridge that lets MCP-compatible assistants query health data already stored in Android Health Connect.
 
 Download the current Android APK from the [v1.0.0 release](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.0).
@@ -65,4 +67,4 @@ ReadMe does not talk to a Huawei band over Bluetooth. Huawei Health remains resp
 
 ## License
 
-The Android subtree is AGPL-3.0 and retains Gadgetbridge attribution. The server subtree is MIT. See [THIRD_PARTY.md](THIRD_PARTY.md) and the license files inside each subtree.
+The Android subtree is AGPL-3.0 and retains Gadgetbridge attribution. The server subtree is MIT. See the repository-level [license notice](LICENSE.md), [THIRD_PARTY.md](THIRD_PARTY.md), and the license files inside each subtree.

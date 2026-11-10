@@ -1,0 +1,29 @@
+name: Container validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  single-container:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deployment manifest
+        env:
+          HEALTHQUERY_PUBLIC_URL: https://health.example.com
+          HEALTHQUERY_ALLOWED_HOSTS: health.example.com
+          HEALTHQUERY_CORS_ORIGINS: https://health.example.com
+          HEALTHQUERY_MCP_ALLOWED_ORIGINS: https://health.example.com
+          HEALTHQUERY_MCP_ISSUER_URL: https://health.example.com/mcp
+          HEALTHQUERY_MCP_RESOURCE_URL: https://health.example.com/mcp
+        run: docker compose -f docker-compose.example.yml config
+      - name: Build the single-container image
+        run: docker build --tag healthquery:ci .
