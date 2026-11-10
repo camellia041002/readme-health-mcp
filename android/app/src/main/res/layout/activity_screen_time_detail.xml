@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/heartbeat_background"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/screen_time_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/heartbeat_background"
+        android:navigationIcon="?attr/homeAsUpIndicator"
+        android:title="@string/screen_time_title"
+        app:navigationIconTint="@color/heartbeat_charcoal"
+        app:titleTextColor="@color/heartbeat_charcoal" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="18dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="28dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/screen_time_today_total"
+            android:textColor="@color/secondarytext"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/screen_time_detail_total"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/heartbeat_charcoal"
+            android:textSize="34sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/screen_time_apps"
+            android:textColor="@color/heartbeat_charcoal"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:id="@+id/screen_time_app_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical" />
+    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

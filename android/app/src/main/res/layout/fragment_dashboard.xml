@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/heartbeat_panel"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    tools:context=".activities.DashboardFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="10dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="28dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/readme_home_greeting"
+            android:textColor="@color/heartbeat_charcoal"
+            android:textSize="30sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <TextView
+                android:id="@+id/heartbeat_band_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/heartbeat_charcoal"
+                android:textSize="13sp"
+                tools:text="Band 10 已连接 · 80%" />
+
+            <TextView
+                android:id="@+id/heartbeat_upload_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textColor="@color/secondarytext"
+                android:textSize="12sp"
+                tools:text="刚刚同步" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/heartbeat_retention_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="@string/heartbeat_retention_unknown"
+            android:textColor="@color/secondarytext"
+            android:textSize="12sp" />
+
+        <androidx.gridlayout.widget.GridLayout
+            android:id="@+id/dashboard_gridlayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="13dp"
+            app:columnCount="2" />
+
+        <!-- Retained as hidden state anchors for the upstream dashboard controller. -->
+        <TextView android:id="@+id/arrow_left" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" />
+        <TextView android:id="@+id/dashboard_date" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" />
+        <TextView android:id="@+id/arrow_right" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" />
+
+        <View
+            android:id="@+id/screen_time_permission"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/screen_time_value"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/screen_time_detail"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:visibility="gone" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

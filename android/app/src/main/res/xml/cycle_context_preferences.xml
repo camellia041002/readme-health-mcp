@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/cycle_context_settings_title">
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:icon="@drawable/ic_cycle"
+        android:key="cycle_enabled"
+        android:layout="@layout/preference_checkbox"
+        android:summary="@string/cycle_enabled_summary"
+        android:title="@string/cycle_enabled_title"
+        app:iconSpaceReserved="true" />
+
+    <Preference
+        android:icon="@drawable/ic_calendar_month"
+        android:key="cycle_last_start"
+        android:title="@string/cycle_last_start_title"
+        app:iconSpaceReserved="true" />
+
+    <Preference
+        android:key="cycle_lengths"
+        android:title="@string/cycle_lengths_title"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:key="cycle_arrived"
+        android:summary="@string/cycle_arrived_summary"
+        android:title="@string/cycle_arrived_title"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:key="cycle_today_day"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:key="cycle_last_start_notice"
+        android:selectable="false"
+        android:summary="@string/cycle_last_start_notice"
+        app:iconSpaceReserved="false" />
+
+</androidx.preference.PreferenceScreen>

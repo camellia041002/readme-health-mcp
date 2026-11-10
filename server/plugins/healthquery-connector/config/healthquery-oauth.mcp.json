@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "healthquery": {
+      "type": "http",
+      "url": "${HEALTHQUERY_MCP_URL}",
+      "oauth": {
+        "scopes": "health:read"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "healthquery",
+  "owner": {
+    "name": "HealthQuery project"
+  },
+  "description": "Self-hosted, read-only Health Connect tools for Claude Code.",
+  "plugins": [
+    {
+      "name": "healthquery-connector",
+      "source": "./plugins/healthquery-connector",
+      "description": "Connect Claude Code to a deployed HealthQuery Streamable HTTP MCP endpoint.",
+      "version": "0.1.1",
+      "category": "Health & Fitness",
+      "tags": ["health-connect", "mcp", "read-only", "health-data"]
+    }
+  ]
+}

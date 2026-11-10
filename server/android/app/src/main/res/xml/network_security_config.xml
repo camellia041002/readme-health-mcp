@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Local/LAN/Tailscale pairing intentionally supports HTTP. The app-level QR parser and
+    HealthSyncTransport URL guard reject public cleartext origins; this base setting only makes
+    Android's transport policy compatible with private-network development servers. Public
+    production pairing still requires HTTPS.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

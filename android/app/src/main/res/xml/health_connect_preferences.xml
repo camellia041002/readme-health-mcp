@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory
+        android:key="pref_key_healthconnect_general"
+        android:title="@string/pref_header_general"
+        app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_heart"
+            android:key="health_connect_enabled"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_health_connect_enabled"
+            app:iconSpaceReserved="true" />
+
+        <Preference
+            android:icon="@drawable/ic_database"
+            android:key="health_connect_manual_settings"
+            android:title="@string/pref_health_connect_manual_settings"
+            app:iconSpaceReserved="true" />
+
+        <Preference
+            android:icon="@drawable/ic_settings"
+            android:key="health_connect_settings"
+            android:title="@string/pref_health_connect_settings"
+            android:summary="@string/pref_health_connect_settings_summary"
+            app:iconSpaceReserved="true" />
+
+        <Preference
+            android:icon="@drawable/ic_info"
+            android:key="health_connect_disable_notice"
+            android:summary="@string/pref_health_connect_disable_notice" />
+
+    </PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

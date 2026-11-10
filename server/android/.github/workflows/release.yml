@@ -1,0 +1,75 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - '[0-9]*.[0-9]*.[0-9]*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # full history so Gradle can derive the version from git tags
+      - name: Validate semver tag
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          if ! echo "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag '$TAG' is not strict semver (X.Y.Z). Refusing to release."
+            exit 1
+          fi
+          LATEST=$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$TAG" | sort -V | tail -1)
+          if [ -n "$LATEST" ]; then
+            HIGHEST=$(printf '%s\n%s\n' "$LATEST" "$TAG" | sort -V | tail -1)
+            if [ "$HIGHEST" != "$TAG" ]; then
+              echo "Tag '$TAG' is not higher than the latest release '$LATEST'. Refusing to release."
+              exit 1
+            fi
+          fi
+      - name: Check signing secrets are configured
+        env:
+          KEYSTORE_FILE_BASE64: ${{ secrets.KEYSTORE_FILE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_FILE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "Missing one or more signing secrets (KEYSTORE_FILE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)."
+            echo "See docs/KEYSTORE_SETUP.md for setup instructions."
+            exit 1
+          fi
+      - name: Set up JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_FILE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/keystore.jks"
+      - name: Build signed release APK
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+      - name: Clean up keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/keystore.jks"
+      - name: Upload release APK as artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          files: app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: true

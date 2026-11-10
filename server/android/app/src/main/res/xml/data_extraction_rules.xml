@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Keep Health Connect payloads/cursors, encrypted pairing material, webhook secrets, and
+    WorkManager progress out of both cloud backup and device transfer. PreferencesManager stores
+    sensitive and non-sensitive values together, so the complete SharedPreferences domain is
+    excluded rather than risking a partial restore.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="."/>
+        <exclude domain="database" path="androidx.work.workdb"/>
+        <exclude domain="database" path="androidx.work.workdb-journal"/>
+        <exclude domain="database" path="androidx.work.workdb-wal"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="."/>
+        <exclude domain="database" path="androidx.work.workdb"/>
+        <exclude domain="database" path="androidx.work.workdb-journal"/>
+        <exclude domain="database" path="androidx.work.workdb-wal"/>
+    </device-transfer>
+</data-extraction-rules>

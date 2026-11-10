@@ -1,0 +1,18 @@
+Life Dashboard Companion Android baseline
+=========================================
+
+This Android module adapts the MIT-licensed Life Dashboard Companion app by
+owen282000 (https://github.com/owen282000/life-dashboard-companion-app),
+including its Gradle project structure, Health Connect integration, and
+Jetpack Compose theme. The upstream copyright and license are retained in
+android/LICENSE. New self-hosted enrollment, lossless record serialization,
+change-token sync, secure credential storage, and minimal companion UI are
+project-specific additions.
+
+Health Connect record names and APIs are provided by the AndroidX Health
+Connect SDK (Apache License 2.0); this project does not redistribute that
+dependency. See https://developer.android.com/health-and-fitness/health-connect.
+
+QR capture uses JourneyApps ZXing Android Embedded 4.3.0 (Apache License 2.0),
+https://github.com/journeyapps/zxing-android-embedded. The scanner is invoked
+only after the user taps Scan QR and grants the runtime camera permission.

@@ -1,0 +1,20 @@
+{
+  "name": "personal",
+  "interface": {
+    "displayName": "Personal"
+  },
+  "plugins": [
+    {
+      "name": "healthquery-connector",
+      "source": {
+        "source": "local",
+        "path": "./plugins/healthquery-connector"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Health & Fitness"
+    }
+  ]
+}

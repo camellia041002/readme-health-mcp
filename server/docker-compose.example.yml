@@ -1,0 +1,80 @@
+name: healthquery
+
+services:
+  healthquery:
+    image: ${HEALTHQUERY_IMAGE:-healthquery:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: healthquery
+    restart: unless-stopped
+    # Keep the application reachable only from a host-local TLS reverse proxy
+    # (Caddy/nginx/Traefik) or Tailscale Funnel. Do not publish 0.0.0.0 here.
+    ports:
+      - "127.0.0.1:${HEALTHQUERY_PORT:-3135}:8000"
+    expose:
+      - "8000"
+    volumes:
+      - healthquery-data:/app/data
+    secrets:
+      - source: admin_password_hash
+        target: admin_password_hash
+        mode: 0444
+      - source: session_secret
+        target: session_secret
+        mode: 0444
+      - source: ingest_token
+        target: ingest_token
+        mode: 0444
+      - source: read_token
+        target: read_token
+        mode: 0444
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: 2.0
+    init: true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - /usr/local/bin/healthquery-healthcheck.py
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    environment:
+      DB_PATH: /app/data/healthquery.db
+      HEALTHQUERY_ENV: production
+      HEALTHQUERY_PUBLIC_URL: ${HEALTHQUERY_PUBLIC_URL:?Set HEALTHQUERY_PUBLIC_URL in .env}
+      HEALTHQUERY_ALLOWED_HOSTS: ${HEALTHQUERY_ALLOWED_HOSTS:?Set HEALTHQUERY_ALLOWED_HOSTS in .env}
+      HEALTHQUERY_CORS_ORIGINS: ${HEALTHQUERY_CORS_ORIGINS:?Set HEALTHQUERY_CORS_ORIGINS in .env}
+      HEALTHQUERY_MCP_ALLOWED_ORIGINS: ${HEALTHQUERY_MCP_ALLOWED_ORIGINS:?Set HEALTHQUERY_MCP_ALLOWED_ORIGINS in .env}
+      HEALTHQUERY_MCP_ISSUER_URL: ${HEALTHQUERY_MCP_ISSUER_URL:?Set HEALTHQUERY_MCP_ISSUER_URL in .env}
+      HEALTHQUERY_MCP_RESOURCE_URL: ${HEALTHQUERY_MCP_RESOURCE_URL:?Set HEALTHQUERY_MCP_RESOURCE_URL in .env}
+      HEALTHQUERY_TRUSTED_PROXY_IPS: ${HEALTHQUERY_TRUSTED_PROXY_IPS:-127.0.0.1,::1}
+      HEALTHQUERY_ADMIN_PASSWORD_HASH_FILE: /run/secrets/admin_password_hash
+      HEALTHQUERY_SESSION_SECRET_FILE: /run/secrets/session_secret
+      HEALTHQUERY_AUTH_HEADER: X-Webhook-Token
+      HEALTHQUERY_LOG_LEVEL: INFO
+volumes:
+  healthquery-data:
+    name: ${HEALTHQUERY_DATA_VOLUME:-healthquery-data}
+
+secrets:
+  admin_password_hash:
+    file: ./secrets/admin-password-hash
+  session_secret:
+    file: ./secrets/session-secret
+  ingest_token:
+    file: ./secrets/ingest-token
+  read_token:
+    file: ./secrets/read-token

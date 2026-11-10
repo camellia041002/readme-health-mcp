@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/heartbeat_panel"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="18dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="28dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/screen_time_title"
+            android:textColor="@color/heartbeat_charcoal"
+            android:textSize="28sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/readme_summary_card"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/screen_time_today_total"
+                android:textColor="@color/heartbeat_dim"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/screen_time_detail_total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/heartbeat_charcoal"
+                android:textSize="34sp" />
+
+            <View
+                android:layout_width="56dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="16dp"
+                android:background="@color/accent" />
+
+            <TextView
+                android:id="@+id/screen_time_permission_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/screen_time_grant_access"
+                android:textColor="@color/accent"
+                android:textSize="14sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/screen_time_apps"
+            android:textColor="@color/heartbeat_charcoal"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:id="@+id/screen_time_app_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/readme_summary_card"
+            android:orientation="vertical" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

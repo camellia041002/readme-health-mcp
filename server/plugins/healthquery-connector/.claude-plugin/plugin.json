@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "healthquery-connector",
+  "displayName": "HealthQuery",
+  "version": "0.1.1",
+  "description": "Read-only HealthQuery remote MCP connector with OAuth discovery and an explicit bearer-token fallback.",
+  "author": {
+    "name": "HealthQuery project"
+  },
+  "license": "MIT",
+  "defaultEnabled": false
+}

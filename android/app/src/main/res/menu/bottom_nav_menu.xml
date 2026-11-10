@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:title="@string/bottom_nav_dashboard"
+        android:id="@+id/bottom_nav_dashboard"
+        android:icon="@drawable/ic_readme_health"/>
+    <item
+        android:title="@string/bottom_nav_screen_time"
+        android:id="@+id/bottom_nav_screen_time"
+        android:icon="@drawable/ic_readme_screen_time"/>
+</menu>

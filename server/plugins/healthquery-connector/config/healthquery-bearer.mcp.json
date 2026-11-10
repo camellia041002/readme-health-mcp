@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "healthquery": {
+      "type": "http",
+      "url": "${HEALTHQUERY_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${HEALTHQUERY_MCP_BEARER_TOKEN}"
+      }
+    }
+  }
+}

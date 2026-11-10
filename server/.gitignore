@@ -1,0 +1,78 @@
+# HealthQuery - local and generated files
+
+# Local deployment files
+docker-compose.yml
+docker-compose.single.yml
+.env
+.env.local
+.env.*.local
+
+# Persistent app data
+data/
+logs/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# AI-agent instructions, state, and local scratch. These may contain project
+# context, handoffs, credential references, or machine-specific state.
+.nosync
+.claude/
+.codex/
+.paper*/
+.agents/
+!.agents/
+!.agents/plugins/
+!.agents/plugins/marketplace.json
+.agent/
+.aider*
+.cursor/
+.continue/
+.copilot/
+.windsurf/
+private/
+scratch/
+temp/
+plan.md
+roadmap.md
+fixes.md
+
+# AI-agent workspace notes
+AGENTS.md
+CLAUDE.md
+CODEX.md
+GEMINI.md
+HANDOFF.md
+MEMORY.md
+*.paper*
+
+# Local sidecar applications; retained outside the public product.
+health_*/
+secrets/

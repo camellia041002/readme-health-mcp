@@ -1,0 +1,120 @@
+/*  Copyright (C) 2026 Gadgetbridge contributors
+
+    This file is part of Gadgetbridge and is licensed under the GNU Affero
+    General Public License, version 3 or later. */
+package nodomain.freeyourgadget.gadgetbridge.util.healthquery
+
+import android.content.Context
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
+import kotlinx.coroutines.runBlocking
+import nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectClientProvider
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneId
+
+data class HealthConnectDashboardSnapshot(
+    val available: Boolean,
+    val steps: Long,
+    val latestHeartRate: Long,
+    val latestHeartRateTime: String,
+    val sleepMinutes: Long,
+    val workoutCount: Int,
+    val latestOxygen: Double,
+    val latestOxygenTime: String,
+    val latestPeriodStart: String,
+    val stepsAvailable: Boolean = false,
+    val sleepStartTime: String = "",
+    val sleepEndTime: String = "",
+    val latestHeartRateDateTime: String = "",
+    val latestOxygenDateTime: String = ""
+) {
+    companion object {
+        @Volatile private var cache: HealthConnectDashboardSnapshot? = null
+        @JvmStatic fun cached(): HealthConnectDashboardSnapshot? = cache
+        @JvmStatic
+        fun load(context: Context): HealthConnectDashboardSnapshot = runBlocking {
+            val client = HealthConnectClientProvider.healthConnectInit(context)
+                ?: return@runBlocking unavailable()
+            val required = setOf(
+                HealthPermission.getReadPermission(StepsRecord::class),
+                HealthPermission.getReadPermission(HeartRateRecord::class),
+                HealthPermission.getReadPermission(SleepSessionRecord::class),
+                HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+            )
+            val granted = runCatching { client.permissionController.getGrantedPermissions() }
+                .getOrElse { return@runBlocking unavailable() }
+            if (!granted.containsAll(required)) return@runBlocking unavailable()
+
+            val zone = ZoneId.systemDefault()
+            val now = Instant.now()
+            val start = now.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
+            val day = runCatching { HealthConnectReadPayload.build(client, start, now, zone).lastOrNull() }
+                .getOrNull() ?: return@runBlocking HealthConnectDashboardSnapshot(true, 0, 0, "", 0, 0, 0.0, "", "")
+            val body = day.body
+            val heart = body.optJSONArray("heart_rate")
+            val lastHeart = heart?.takeIf { it.length() > 0 }?.let { it.optJSONObject(it.length() - 1) }
+            val heartTime = lastHeart?.optString("timestamp").orEmpty()
+            val displayTime = runCatching {
+                OffsetDateTime.parse(heartTime).toLocalTime().withSecond(0).withNano(0).toString()
+            }.getOrDefault("")
+            val displayDateTime = runCatching {
+                OffsetDateTime.parse(heartTime).atZoneSameInstant(zone).format(DATE_TIME_FORMAT)
+            }.getOrDefault("")
+            val sleep = body.optJSONArray("sleep")
+            var sleepSeconds = 0L
+            var mainSleep: org.json.JSONObject? = null
+            if (sleep != null) {
+                for (index in 0 until sleep.length()) {
+                    val session = sleep.optJSONObject(index) ?: continue
+                    val duration = session.optLong("duration_seconds", 0L)
+                    sleepSeconds += duration
+                    if (duration > (mainSleep?.optLong("duration_seconds", 0L) ?: 0L)) mainSleep = session
+                }
+            }
+            val sleepStart = formatClock(mainSleep?.optString("session_start_time").orEmpty(), zone)
+            val sleepEnd = formatClock(mainSleep?.optString("session_end_time").orEmpty(), zone)
+            val oxygenPermission = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
+            val periodPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
+            val oxygen = if (oxygenPermission in granted) runCatching {
+                client.readRecords(ReadRecordsRequest(OxygenSaturationRecord::class, TimeRangeFilter.between(now.minusSeconds(30L * 86400L), now), pageSize = 1000))
+                    .records.maxByOrNull { it.time }
+            }.getOrNull() else null
+            val period = if (periodPermission in granted) runCatching {
+                client.readRecords(ReadRecordsRequest(MenstruationPeriodRecord::class, TimeRangeFilter.between(now.minusSeconds(180L * 86400L), now), pageSize = 1000))
+                    .records.maxByOrNull { it.startTime }
+            }.getOrNull() else null
+            HealthConnectDashboardSnapshot(
+                available = true,
+                steps = body.optJSONObject("steps")?.optLong("total", 0L) ?: 0L,
+                latestHeartRate = lastHeart?.optLong("value", 0L) ?: 0L,
+                latestHeartRateTime = displayTime,
+                sleepMinutes = sleepSeconds / 60L,
+                workoutCount = body.optJSONArray("workouts")?.length() ?: 0,
+                latestOxygen = oxygen?.percentage?.value ?: 0.0,
+                latestOxygenTime = oxygen?.time?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty(),
+                latestPeriodStart = period?.startTime?.atZone(zone)?.toLocalDate()?.format(java.time.format.DateTimeFormatter.ofPattern("M月d日")).orEmpty(),
+                stepsAvailable = body.has("steps"),
+                sleepStartTime = sleepStart,
+                sleepEndTime = sleepEnd,
+                latestHeartRateDateTime = displayDateTime,
+                latestOxygenDateTime = oxygen?.time?.atZone(zone)?.format(DATE_TIME_FORMAT).orEmpty()
+            ).also { cache = it }
+        }
+
+        private val DATE_TIME_FORMAT = java.time.format.DateTimeFormatter.ofPattern("M月d日 HH:mm")
+
+        private fun formatClock(value: String, zone: ZoneId): String = runCatching {
+            OffsetDateTime.parse(value).atZoneSameInstant(zone).toLocalTime().withSecond(0).withNano(0).toString()
+        }.getOrDefault("")
+
+        private fun unavailable() = HealthConnectDashboardSnapshot(false, 0, 0, "", 0, 0, 0.0, "", "")
+    }
+}

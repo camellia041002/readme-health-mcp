@@ -1,0 +1,45 @@
+name: Public repository hygiene
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  public-content-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject private, generated, and agent artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden_paths="$({
+            git rev-list --all | while read -r commit; do
+              git diff-tree --no-commit-id --name-only -r "$commit"
+            done
+          } | sort -u | grep -Ei '(^|/)(AGENTS|CLAUDE|CODEX|GEMINI|HANDOFF|MEMORY)\.md$|(^|/)\.nosync$|(^|/)(private|scratch|temp|data|logs)/|(^|/)\.env($|\.)|(^|/)(.*\.(db|sqlite|sqlite3|pem|key|p12|pfx))$' | grep -Ev '^\.env\.example$' || true)"
+          if [[ -n "$forbidden_paths" ]]; then
+            echo "Forbidden public paths found:" >&2
+            echo "$forbidden_paths" >&2
+            exit 1
+          fi
+      - name: Reject common credential signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          secret_paths="$({
+            git rev-list --all | while read -r commit; do
+              git grep -I -l -E -e '-----BEGIN (RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|sk-[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}' "$commit" -- 2>/dev/null | sed "s#^#${commit}:#" || true
+            done
+          } | sort -u)"
+          if [[ -n "$secret_paths" ]]; then
+            echo "Credential-like content found (paths only):" >&2
+            echo "$secret_paths" >&2
+            exit 1
+          fi

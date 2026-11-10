@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Do not restore app state that contains health payloads, Health Connect cursors, pairing
+    credentials, webhook secrets, or WorkManager progress. PreferencesManager keeps sensitive
+    and non-sensitive settings in one SharedPreferences file, so it cannot be safely backed up
+    at key granularity.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="."/>
+    <exclude domain="database" path="androidx.work.workdb"/>
+    <exclude domain="database" path="androidx.work.workdb-journal"/>
+    <exclude domain="database" path="androidx.work.workdb-wal"/>
+</full-backup-content>
