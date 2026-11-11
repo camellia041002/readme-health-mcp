@@ -4,7 +4,7 @@
 
 ReadMe is a self-hosted, read-only bridge that lets MCP-compatible assistants query health data already stored in Android Health Connect.
 
-Download the current Android APK from the [v1.0.0 release](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.0).
+Download the current Android APK from the [v1.0.1 release](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.1).
 
 ```text
 wearable -> vendor health app -> Health Sync -> Health Connect

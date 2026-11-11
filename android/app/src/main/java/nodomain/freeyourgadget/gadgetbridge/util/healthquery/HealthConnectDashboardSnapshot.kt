@@ -34,7 +34,9 @@ data class HealthConnectDashboardSnapshot(
     val sleepStartTime: String = "",
     val sleepEndTime: String = "",
     val latestHeartRateDateTime: String = "",
-    val latestOxygenDateTime: String = ""
+    val latestOxygenDateTime: String = "",
+    val latestSleepDate: String = "",
+    val latestStepsDateTime: String = ""
 ) {
     companion object {
         @Volatile private var cache: HealthConnectDashboardSnapshot? = null
@@ -59,28 +61,48 @@ data class HealthConnectDashboardSnapshot(
             val day = runCatching { HealthConnectReadPayload.build(client, start, now, zone).lastOrNull() }
                 .getOrNull() ?: return@runBlocking HealthConnectDashboardSnapshot(true, 0, 0, "", 0, 0, 0.0, "", "")
             val body = day.body
-            val heart = body.optJSONArray("heart_rate")
-            val lastHeart = heart?.takeIf { it.length() > 0 }?.let { it.optJSONObject(it.length() - 1) }
-            val heartTime = lastHeart?.optString("timestamp").orEmpty()
+            // Steps are a true "today" value, but heart rate and sleep cards should
+            // show the latest available measurement/session. An upload just after
+            // midnight must not turn yesterday's freshly synced health data into
+            // the misleading state "not synced".
+            val latestHeartSample = runCatching {
+                client.readRecords(
+                    ReadRecordsRequest(
+                        HeartRateRecord::class,
+                        TimeRangeFilter.between(now.minusSeconds(7L * 86400L), now),
+                        pageSize = 1000
+                    )
+                ).records.flatMap { it.samples }.maxByOrNull { it.time }
+            }.getOrNull()
+            val heartTime = latestHeartSample?.time?.atZone(zone)?.toOffsetDateTime()?.toString().orEmpty()
             val displayTime = runCatching {
                 OffsetDateTime.parse(heartTime).toLocalTime().withSecond(0).withNano(0).toString()
             }.getOrDefault("")
             val displayDateTime = runCatching {
                 OffsetDateTime.parse(heartTime).atZoneSameInstant(zone).format(DATE_TIME_FORMAT)
             }.getOrDefault("")
-            val sleep = body.optJSONArray("sleep")
-            var sleepSeconds = 0L
-            var mainSleep: org.json.JSONObject? = null
-            if (sleep != null) {
-                for (index in 0 until sleep.length()) {
-                    val session = sleep.optJSONObject(index) ?: continue
-                    val duration = session.optLong("duration_seconds", 0L)
-                    sleepSeconds += duration
-                    if (duration > (mainSleep?.optLong("duration_seconds", 0L) ?: 0L)) mainSleep = session
-                }
-            }
-            val sleepStart = formatClock(mainSleep?.optString("session_start_time").orEmpty(), zone)
-            val sleepEnd = formatClock(mainSleep?.optString("session_end_time").orEmpty(), zone)
+            val latestSleep = runCatching {
+                client.readRecords(
+                    ReadRecordsRequest(
+                        SleepSessionRecord::class,
+                        TimeRangeFilter.between(now.minusSeconds(7L * 86400L), now),
+                        pageSize = 1000
+                    )
+                ).records.maxByOrNull { it.endTime }
+            }.getOrNull()
+            val sleepSeconds = latestSleep?.let { java.time.Duration.between(it.startTime, it.endTime).seconds } ?: 0L
+            val sleepStart = latestSleep?.startTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
+            val sleepEnd = latestSleep?.endTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
+            val sleepDate = latestSleep?.endTime?.atZone(zone)?.format(DATE_FORMAT).orEmpty()
+            val latestSteps = runCatching {
+                client.readRecords(
+                    ReadRecordsRequest(
+                        StepsRecord::class,
+                        TimeRangeFilter.between(start, now),
+                        pageSize = 1000
+                    )
+                ).records.maxByOrNull { it.endTime }
+            }.getOrNull()
             val oxygenPermission = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
             val periodPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
             val oxygen = if (oxygenPermission in granted) runCatching {
@@ -94,7 +116,7 @@ data class HealthConnectDashboardSnapshot(
             HealthConnectDashboardSnapshot(
                 available = true,
                 steps = body.optJSONObject("steps")?.optLong("total", 0L) ?: 0L,
-                latestHeartRate = lastHeart?.optLong("value", 0L) ?: 0L,
+                latestHeartRate = latestHeartSample?.beatsPerMinute ?: 0L,
                 latestHeartRateTime = displayTime,
                 sleepMinutes = sleepSeconds / 60L,
                 workoutCount = body.optJSONArray("workouts")?.length() ?: 0,
@@ -105,11 +127,14 @@ data class HealthConnectDashboardSnapshot(
                 sleepStartTime = sleepStart,
                 sleepEndTime = sleepEnd,
                 latestHeartRateDateTime = displayDateTime,
-                latestOxygenDateTime = oxygen?.time?.atZone(zone)?.format(DATE_TIME_FORMAT).orEmpty()
+                latestOxygenDateTime = oxygen?.time?.atZone(zone)?.format(DATE_TIME_FORMAT).orEmpty(),
+                latestSleepDate = sleepDate,
+                latestStepsDateTime = latestSteps?.endTime?.atZone(zone)?.format(DATE_TIME_FORMAT).orEmpty()
             ).also { cache = it }
         }
 
         private val DATE_TIME_FORMAT = java.time.format.DateTimeFormatter.ofPattern("M月d日 HH:mm")
+        private val DATE_FORMAT = java.time.format.DateTimeFormatter.ofPattern("M月d日")
 
         private fun formatClock(value: String, zone: ZoneId): String = runCatching {
             OffsetDateTime.parse(value).atZoneSameInstant(zone).toLocalTime().withSecond(0).withNano(0).toString()

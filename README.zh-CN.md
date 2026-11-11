@@ -4,7 +4,7 @@
 
 ReadMe 是一套自托管、只读的健康数据桥，让支持 MCP 的 Chat 端和 Agent 端能够查询 Android Health Connect 中已有的数据。
 
-当前 Android 安装包可从 [v1.0.0 发布页](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.0)下载。
+当前 Android 安装包可从 [v1.0.1 发布页](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.1)下载。
 
 ```text
 手环或手表 → 官方健康 App → Health Sync → Health Connect

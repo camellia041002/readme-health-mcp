@@ -140,6 +140,7 @@ public class DashboardFragment extends Fragment implements MenuProvider {
                     if (dev != null) {
                         if (dashboardData.showAllDevices || dashboardData.showDeviceList.contains(dev.getAddress())) {
                             refresh();
+                            loadHealthSnapshot();
                         }
                     }
                     break;
@@ -216,6 +217,10 @@ public class DashboardFragment extends Fragment implements MenuProvider {
         } else if (widgetMap.isEmpty()) {
             refresh();
         }
+        // Keep the cached cards visible, then silently read Health Connect again.
+        // Without this, reopening the home screen can keep a stale empty snapshot
+        // even after Health Sync has written newer records.
+        loadHealthSnapshot();
     }
 
     @Override
@@ -363,10 +368,11 @@ public class DashboardFragment extends Fragment implements MenuProvider {
         final String sleepValue = sleepMinutes > 0
                 ? getString(R.string.readme_sleep_value, sleepMinutes / 60, sleepMinutes % 60)
                 : getString(R.string.readme_not_synced);
-        final String sleepHint = snapshot.getSleepStartTime().isEmpty() || snapshot.getSleepEndTime().isEmpty()
-                ? selectedDate()
+        final String sleepTimes = snapshot.getSleepStartTime().isEmpty() || snapshot.getSleepEndTime().isEmpty()
+                ? ""
                 : getString(R.string.readme_sleep_range, snapshot.getSleepStartTime(), snapshot.getSleepEndTime());
-        addReadMeCard(R.string.readme_card_sleep, sleepValue, sleepHint);
+        addReadMeCard(R.string.readme_card_sleep, sleepValue,
+                snapshot.getLatestSleepDate().isEmpty() ? selectedDate() : snapshot.getLatestSleepDate(), sleepTimes);
         final String heartValue = snapshot.getLatestHeartRate() > 0
                 ? getString(R.string.readme_heart_value, snapshot.getLatestHeartRate())
                 : getString(R.string.readme_not_synced);
@@ -378,7 +384,7 @@ public class DashboardFragment extends Fragment implements MenuProvider {
                 ? getString(R.string.readme_steps_value, snapshot.getSteps())
                 : getString(R.string.readme_not_synced);
         final String stepsHint = snapshot.getStepsAvailable()
-                ? selectedDate() + " · " + getString(R.string.readme_card_steps_hint)
+                ? (snapshot.getLatestStepsDateTime().isEmpty() ? selectedDate() : snapshot.getLatestStepsDateTime())
                 : getString(R.string.readme_steps_missing_hint);
         addReadMeCard(R.string.readme_card_steps, stepsValue, stepsHint);
         addReadMeCard(R.string.readme_card_spo2,
@@ -416,6 +422,10 @@ public class DashboardFragment extends Fragment implements MenuProvider {
     }
 
     private void addReadMeCard(int titleRes, String value, String hintText) {
+        addReadMeCard(titleRes, value, hintText, "");
+    }
+
+    private void addReadMeCard(int titleRes, String value, String footerLeft, String footerRight) {
         final float density = getResources().getDisplayMetrics().density;
         final MaterialCardView card = new MaterialCardView(requireContext());
         card.setRadius(20 * density);
@@ -450,12 +460,27 @@ public class DashboardFragment extends Fragment implements MenuProvider {
         metricParams.topMargin = (int) (4 * density);
         metricParams.bottomMargin = (int) (4 * density);
         content.addView(metric, metricParams);
+        final LinearLayout footer = new LinearLayout(requireContext());
+        footer.setOrientation(LinearLayout.HORIZONTAL);
+        footer.setGravity(Gravity.BOTTOM);
         final TextView hint = new TextView(requireContext());
-        hint.setText(hintText);
+        hint.setText(footerLeft);
         hint.setTextColor(ContextCompat.getColor(requireContext(), R.color.secondarytext));
         hint.setTextSize(13);
         hint.setMaxLines(2);
-        content.addView(hint);
+        footer.addView(hint, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (!footerRight.isEmpty()) {
+            final TextView right = new TextView(requireContext());
+            right.setText(footerRight);
+            right.setTextColor(ContextCompat.getColor(requireContext(), R.color.secondarytext));
+            right.setTextSize(13);
+            right.setGravity(Gravity.END);
+            right.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_END);
+            right.setMaxLines(2);
+            footer.addView(right, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        content.addView(footer);
         card.addView(content, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
