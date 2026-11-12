@@ -1,85 +1,87 @@
 # ReadMe Health MCP
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[简体中文](README.md) | [English](README.en.md)
 
-ReadMe is a self-hosted, read-only bridge that lets MCP-compatible assistants query health data already stored in Android Health Connect.
+ReadMe 是一套自托管、只读的健康数据桥，让支持 MCP 的 Chat 端和 Agent 端能够查询 Android Health Connect 中已有的数据。
 
-Download the current Android APK from the [v1.0.1 release](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.1).
+当前 Android 安装包可从 [v1.0.1 发布页](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.1)下载。
 
 ```text
-wearable -> vendor health app -> Health Sync -> Health Connect
-                                              |
-                                              v
-                                      ReadMe Android app
-                                              |
-                                           HTTPS
-                                              |
-                                              v
-                                  self-hosted HealthQuery server
-                                              |
-                                              v
-                                      read-only MCP clients
+手环或手表 → 官方健康 App → Health Sync → Health Connect
+                                               │
+                                               ▼
+                                      ReadMe Android App
+                                               │
+                                             HTTPS
+                                               │
+                                               ▼
+                                    自托管 HealthQuery 服务
+                                               │
+                                               ▼
+                                         只读 MCP 客户端
 ```
 
-The Android app also provides a local dashboard and an optional screen-time source. Screen-time access is separate and can be left disabled.
+这套方案不会替换设备原有的官方链路。手环仍然由官方健康 App 管理和同步，ReadMe 只是在 Health Connect 旁边增加一条供小机使用的只读数据通道。
 
-## What it can read
+Android App 同时提供本地健康看板，也可以选择读取各应用的前台使用时长。屏幕使用时间权限完全独立，不授权就不会读取或上传这部分数据。
 
-- sleep sessions and stages
-- heart rate
-- blood oxygen
-- menstrual period records, when the source writes them to Health Connect
-- steps and activity summaries
-- exercise records exposed by Health Connect
-- optional Android app foreground-usage totals
+## 可以读取什么
 
-Data availability depends on what the wearable's companion app or Health Sync writes into Health Connect. The reference setup is Huawei Band 10 with Huawei Health and Health Sync; other devices can work when they populate compatible Health Connect records.
+- 睡眠记录与睡眠阶段
+- 心率
+- 血氧饱和度
+- 生理周期记录（前提是上游写入 Health Connect）
+- 步数和活动汇总
+- Health Connect 提供的运动记录
+- 可选的 Android 应用前台使用时长
 
-## Privacy model
+实际能读到哪些数据，取决于设备的官方健康 App 或 Health Sync 向 Health Connect 写入了什么。当前完整验证的组合是华为手环 10、华为运动健康和 Health Sync。其他设备只要能写入兼容的 Health Connect 记录，原则上也可以沿用后面的 ReadMe、服务器和 MCP。
 
-- Health data is read only. The project does not edit Health Connect records.
-- The server is self-hosted and MCP credentials are independently revocable.
-- Reader audit records the named credential, query time, requested categories/range, and a bounded result summary.
-- Reader names are configured by the server owner; no private assistant name is built in.
-- Screen-time access is optional and does not read screen contents.
+## 隐私边界
 
-## Repository layout
+- 健康数据只读，项目不会修改 Health Connect 中的记录。
+- 服务端由使用者自行部署，每个 MCP 凭据都可以单独撤销。
+- 「谁看过」会记录凭据名称、查询时间、查询类别与时间范围，以及经过限制的返回摘要。
+- 读取者名称由服务器所有者自行配置，项目没有内置私人助理名称。
+- 屏幕使用时间是可选功能，只统计应用在前台使用了多久，不读取屏幕内容。
 
-- [`android/`](android/) — ReadMe Android client and local dashboard (AGPL-3.0; Gadgetbridge-derived).
-- [`server/`](server/) — HealthQuery server, web dashboard, enrollment, audit, and MCP endpoint (MIT).
-- [`docs/SETUP.md`](docs/SETUP.md) — end-to-end installation.
-- [`docs/PRIVACY.md`](docs/PRIVACY.md) — permissions and trust boundaries.
-- [`THIRD_PARTY.md`](THIRD_PARTY.md) — provenance and license map.
+## 仓库结构
 
-## Release relationship
+- [`android/`](android/)：ReadMe Android 客户端和本地看板，基于 Gadgetbridge，使用 AGPL-3.0。
+- [`server/`](server/)：HealthQuery 服务端、Web 看板、设备接入、审计记录和 MCP 端点，使用 MIT。
+- [`docs/SETUP.zh-CN.md`](docs/SETUP.zh-CN.md)：完整安装、自动同步与故障排查说明。
+- [`docs/PRIVACY.md`](docs/PRIVACY.md)：权限和信任边界。
+- [`LICENSE.md`](LICENSE.md)：本仓库的混合许可证说明。
+- [`THIRD_PARTY.md`](THIRD_PARTY.md)：第三方来源和许可证清单。
 
-This public repository is a sanitized release snapshot assembled from separate private Android and server
-development sources. Private development remains the source of truth and may move ahead between public releases.
-The public tree contains only generic self-hosting interfaces and examples; production domains, credentials,
-private reader names, databases, screenshots and deployment logs are not copied here.
+## 版本关系
 
-## Quick start
+本仓库是由手机端和服务端两个私人开发主线抽取、脱敏并组合而成的公开发布快照。私库始终保存
+最新完整源码，公开版可以在两次正式发布之间暂时晚于私库。公开仓库只保留自托管需要的通用
+接口和示例，不包含真实生产域名、凭据、私人读取者名称、数据库、私人截图或部署日志。
 
-1. Deploy the server using `server/docker-compose.example.yml` and an HTTPS domain.
-2. Install the APK from this repository's Releases page, or build `android/` yourself.
-3. In the server dashboard, generate a device enrollment QR and scan it in ReadMe.
-4. Grant only the Health Connect record types you want to share.
-5. Create a named, read-only MCP credential for each assistant.
+## 快速开始
 
-See [the full setup guide](docs/SETUP.md) before exposing the server to the internet.
+1. 使用 `server/docker-compose.example.yml` 和自己的 HTTPS 域名部署服务端。
+2. 从 Releases 安装 APK，或者自行构建 `android/`。
+3. 在服务端看板生成设备接入二维码，然后使用 ReadMe 扫描。
+4. 只授权你愿意共享的 Health Connect 数据类型。
+5. 为每一只小机创建独立、只读的 MCP 凭据。
 
-## Automatic sync
+将服务端暴露到互联网前，请先阅读[完整安装说明](docs/SETUP.zh-CN.md)。
 
-Automatic updates contain two independent stages: Health Sync first writes records from the vendor health app into Health Connect, and ReadMe then uploads records already present in Health Connect to the self-hosted server. Finishing the first stage does not mean the second stage has already run.
+## 自动同步
 
-ReadMe schedules a background upload every 15 minutes by default. This is the shortest interval supported by Android periodic work, not a precise real-time timer. Battery saving, background restrictions, network conditions, or force-stopping an app can delay or stop the chain. Allow auto-start and background activity for the vendor health app, Health Sync, and ReadMe, and remove strict battery restrictions. If Health Sync reports an automatic-sync failure, also check its notification permission.
+自动更新包含两段互相独立的同步：Health Sync 先把官方健康 App 中的数据写入 Health Connect，随后 ReadMe 再把 Health Connect 中已有的数据上传到自己的服务器。前一段完成，不代表后一段已经完成。
 
-Dates and times on health cards are measurement timestamps, not the time when ReadMe most recently uploaded to the server. See [setup and troubleshooting](docs/SETUP.md#automatic-sync-and-troubleshooting) for the full checklist.
+ReadMe 默认每 15 分钟安排一次后台上传，这是 Android 后台任务允许的最短周期，但并不是精确的实时计时器。手机的省电、后台限制、网络状态或“强行停止”都可能推迟或停止任务。请为官方健康 App、Health Sync 和 ReadMe 开启自启动与后台运行，并取消严格的电池限制；若 Health Sync 报告自动同步失败，也要检查它的通知权限。
 
-## Important limitation
+卡片中的日期和时间是健康数据的实际测量时间，不是 ReadMe 最近一次上传到服务器的时间。完整检查清单和排查顺序见[安装与故障排查](docs/SETUP.zh-CN.md#自动同步与故障排查)。
 
-ReadMe does not talk to a Huawei band over Bluetooth. Huawei Health remains responsible for the band connection; Health Sync moves supported records into Health Connect. Android background scheduling is best-effort, so battery restrictions can delay a sync.
+## 重要限制
 
-## License
+ReadMe 不会通过蓝牙直接连接华为手环。手环连接仍由华为运动健康负责，Health Sync 将支持的数据转入 Health Connect。Android 的后台调度属于尽力执行；手机省电策略过于严格时，同步可能延迟。
 
-The Android subtree is AGPL-3.0 and retains Gadgetbridge attribution. The server subtree is MIT. See the repository-level [license notice](LICENSE.md), [THIRD_PARTY.md](THIRD_PARTY.md), and the license files inside each subtree.
+## 许可证
+
+`android/` 使用 AGPL-3.0，并保留 Gadgetbridge 的来源和署名；`server/` 使用 MIT。详细边界见仓库根目录的[许可证说明](LICENSE.md)、[第三方清单](THIRD_PARTY.md)以及两个子目录中的完整许可证文件。

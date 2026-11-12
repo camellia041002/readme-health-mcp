@@ -2,6 +2,9 @@
 
 Updated: 2026-11-13
 
+Chinese is now the default repository language: `README.md` is the Chinese entry point, `README.en.md` preserves
+the complete English introduction, and the former `README.zh-CN.md` path remains as a compatibility pointer.
+
 The repository role is now explicit: this is the sanitized public release snapshot assembled from the private
 Android and server development sources. Private development remains authoritative; public releases may lag until
 the next deliberate sanitization and release pass. Generic self-hosting API routes remain public by design, while
