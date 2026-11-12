@@ -51,6 +51,13 @@ Data availability depends on what the wearable's companion app or Health Sync wr
 - [`docs/PRIVACY.md`](docs/PRIVACY.md) — permissions and trust boundaries.
 - [`THIRD_PARTY.md`](THIRD_PARTY.md) — provenance and license map.
 
+## Release relationship
+
+This public repository is a sanitized release snapshot assembled from separate private Android and server
+development sources. Private development remains the source of truth and may move ahead between public releases.
+The public tree contains only generic self-hosting interfaces and examples; production domains, credentials,
+private reader names, databases, screenshots and deployment logs are not copied here.
+
 ## Quick start
 
 1. Deploy the server using `server/docker-compose.example.yml` and an HTTPS domain.

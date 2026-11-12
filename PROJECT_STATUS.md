@@ -1,6 +1,14 @@
 # Project status
 
-Updated: 2026-11-12
+Updated: 2026-11-13
+
+The repository role is now explicit: this is the sanitized public release snapshot assembled from the private
+Android and server development sources. Private development remains authoritative; public releases may lag until
+the next deliberate sanitization and release pass. Generic self-hosting API routes remain public by design, while
+production domains, credentials, private reader names and deployment data are excluded.
+
+The setup guide now records why the supported design keeps the vendor health app as the wearable manager instead
+of using the historical direct-band candidate.
 
 Version 1.0.1 fixes the Android home dashboard after a fresh Health Connect sync. Returning to the home screen now silently refreshes its snapshot; heart rate and sleep show the latest available real record across midnight instead of incorrectly falling back to “not synced”; steps remain a today-only total and show their latest record timestamp. The sleep card now places the session date at left and bedtime/wake time at right. The signed release APK passed targeted Android tests, release Lint, signature verification, and a real-device UI check.
 

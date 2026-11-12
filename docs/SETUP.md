@@ -10,6 +10,17 @@ For the reference Huawei Band 10 setup: `Huawei Band 10 -> Huawei Health -> Heal
 
 Do not uninstall Huawei Health, extract account cookies, reset the band, or pair the band directly with ReadMe.
 
+### Why ReadMe does not connect to the band directly
+
+Direct companion apps exist and a real-device candidate was tested. The path is shorter, but the new app must
+take over or time-share management of the same wearable with the vendor app. Pairing or initialization failures
+then require reconnect, unpairing, or reset recovery, while vendor dashboards, cloud sync, firmware, watch-face
+features, and some record types may no longer remain available through the normal path.
+
+The supported design keeps the vendor app unchanged and adds a read-only route beside it. It does not modify the
+wearable's data, pairing, or existing history. The trade-off is a longer chain whose three phone apps must be
+allowed to run in the background.
+
 ## 2. Deploy the server
 
 ```bash
