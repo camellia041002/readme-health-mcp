@@ -61,6 +61,14 @@ Data availability depends on what the wearable's companion app or Health Sync wr
 
 See [the full setup guide](docs/SETUP.md) before exposing the server to the internet.
 
+## Automatic sync
+
+Automatic updates contain two independent stages: Health Sync first writes records from the vendor health app into Health Connect, and ReadMe then uploads records already present in Health Connect to the self-hosted server. Finishing the first stage does not mean the second stage has already run.
+
+ReadMe schedules a background upload every 15 minutes by default. This is the shortest interval supported by Android periodic work, not a precise real-time timer. Battery saving, background restrictions, network conditions, or force-stopping an app can delay or stop the chain. Allow auto-start and background activity for the vendor health app, Health Sync, and ReadMe, and remove strict battery restrictions. If Health Sync reports an automatic-sync failure, also check its notification permission.
+
+Dates and times on health cards are measurement timestamps, not the time when ReadMe most recently uploaded to the server. See [setup and troubleshooting](docs/SETUP.md#automatic-sync-and-troubleshooting) for the full checklist.
+
 ## Important limitation
 
 ReadMe does not talk to a Huawei band over Bluetooth. Huawei Health remains responsible for the band connection; Health Sync moves supported records into Health Connect. Android background scheduling is best-effort, so battery restrictions can delay a sync.

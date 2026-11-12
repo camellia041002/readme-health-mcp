@@ -8,4 +8,4 @@ Version 1.0.0 is publicly released at https://github.com/camellia041002/readme-h
 
 The published source and signed APK passed the privacy scan, Android/server tests, clean-build verification, signature verification, and independent review. The release tag points to the reviewed single-commit source tree.
 
-The public main branch also provides English/Chinese documentation, a repository-level multi-license notice, and root GitHub Actions for backend tests, Web tests/build, container validation, and public-content auditing. These documentation and CI additions do not change the v1.0.0 APK or its release tag.
+The public main branch also provides English/Chinese documentation, including a bilingual automatic-sync and troubleshooting guide that separates the Health Sync → Health Connect stage from the ReadMe → server stage, documents Android background restrictions, and explains measurement versus upload timestamps. The repository also includes a multi-license notice and root GitHub Actions for backend tests, Web tests/build, container validation, and public-content auditing. Documentation-only updates do not change the v1.0.1 APK or its release tag.

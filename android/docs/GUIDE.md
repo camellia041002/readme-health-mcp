@@ -11,4 +11,8 @@ ReadMe reads records already present in Android Health Connect. It does not conn
 
 If updates are delayed, check each link independently: official app, exporter, Health Connect, ReadMe upload, then MCP query. Android may defer background work under battery restrictions.
 
+For reliable automatic updates, allow auto-start and background activity for the official app, Health Sync, and ReadMe, and remove strict battery restrictions. Do not force-stop any of them; after a force-stop, Android will not resume that app's scheduled work until it is opened again. If Health Sync reports scheduled-sync failure, also check its notification permission.
+
+Health Sync and ReadMe are two separate stages. After a manual Health Sync, first verify the new record in Health Connect, then use **Sync now** in ReadMe when testing the phone-to-server stage. ReadMe schedules a 15-minute periodic upload by default, but Android may defer it. Card timestamps describe when the health measurement occurred, not when the server upload occurred.
+
 For complete instructions, see [`docs/SETUP.md`](../../docs/SETUP.md).

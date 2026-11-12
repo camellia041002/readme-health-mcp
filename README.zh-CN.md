@@ -49,7 +49,7 @@ Android App 同时提供本地健康看板，也可以选择读取各应用的�
 
 - [`android/`](android/)：ReadMe Android 客户端和本地看板，基于 Gadgetbridge，使用 AGPL-3.0。
 - [`server/`](server/)：HealthQuery 服务端、Web 看板、设备接入、审计记录和 MCP 端点，使用 MIT。
-- [`docs/SETUP.md`](docs/SETUP.md)：完整安装与接入说明。
+- [`docs/SETUP.zh-CN.md`](docs/SETUP.zh-CN.md)：完整安装、自动同步与故障排查说明。
 - [`docs/PRIVACY.md`](docs/PRIVACY.md)：权限和信任边界。
 - [`LICENSE.md`](LICENSE.md)：本仓库的混合许可证说明。
 - [`THIRD_PARTY.md`](THIRD_PARTY.md)：第三方来源和许可证清单。
@@ -62,7 +62,15 @@ Android App 同时提供本地健康看板，也可以选择读取各应用的�
 4. 只授权你愿意共享的 Health Connect 数据类型。
 5. 为每一只小机创建独立、只读的 MCP 凭据。
 
-将服务端暴露到互联网前，请先阅读[完整安装说明](docs/SETUP.md)。
+将服务端暴露到互联网前，请先阅读[完整安装说明](docs/SETUP.zh-CN.md)。
+
+## 自动同步
+
+自动更新包含两段互相独立的同步：Health Sync 先把官方健康 App 中的数据写入 Health Connect，随后 ReadMe 再把 Health Connect 中已有的数据上传到自己的服务器。前一段完成，不代表后一段已经完成。
+
+ReadMe 默认每 15 分钟安排一次后台上传，这是 Android 后台任务允许的最短周期，但并不是精确的实时计时器。手机的省电、后台限制、网络状态或“强行停止”都可能推迟或停止任务。请为官方健康 App、Health Sync 和 ReadMe 开启自启动与后台运行，并取消严格的电池限制；若 Health Sync 报告自动同步失败，也要检查它的通知权限。
+
+卡片中的日期和时间是健康数据的实际测量时间，不是 ReadMe 最近一次上传到服务器的时间。完整检查清单和排查顺序见[安装与故障排查](docs/SETUP.zh-CN.md#自动同步与故障排查)。
 
 ## 重要限制
 
