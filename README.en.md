@@ -50,6 +50,7 @@ For ordinary daily questions, MCP clients can request one normalized summary ins
 - [`android/`](android/) — ReadMe Android client and local dashboard (AGPL-3.0; Gadgetbridge-derived).
 - [`server/`](server/) — HealthQuery server, web dashboard, enrollment, audit, and MCP endpoint (MIT).
 - [`docs/SETUP.md`](docs/SETUP.md) — end-to-end installation.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — supported path, alternatives, and architecture trade-offs.
 - [`docs/PRIVACY.md`](docs/PRIVACY.md) — permissions and trust boundaries.
 - [`THIRD_PARTY.md`](THIRD_PARTY.md) — provenance and license map.
 

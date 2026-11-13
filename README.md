@@ -52,6 +52,7 @@ Android App 同时提供本地健康看板，也可以选择读取各应用的�
 - [`android/`](android/)：ReadMe Android 客户端和本地看板，基于 Gadgetbridge，使用 AGPL-3.0。
 - [`server/`](server/)：HealthQuery 服务端、Web 看板、设备接入、审计记录和 MCP 端点，使用 MIT。
 - [`docs/SETUP.zh-CN.md`](docs/SETUP.zh-CN.md)：完整安装、自动同步与故障排查说明。
+- [`docs/ARCHITECTURE.zh-CN.md`](docs/ARCHITECTURE.zh-CN.md)：正式链路、替代方案与架构取舍。
 - [`docs/PRIVACY.md`](docs/PRIVACY.md)：权限和信任边界。
 - [`LICENSE.md`](LICENSE.md)：本仓库的混合许可证说明。
 - [`THIRD_PARTY.md`](THIRD_PARTY.md)：第三方来源和许可证清单。

@@ -2,6 +2,12 @@
 
 Updated: 2026-11-14
 
+Architecture trade-offs and unselected routes now live in dedicated bilingual documents:
+`docs/ARCHITECTURE.zh-CN.md` and `docs/ARCHITECTURE.md`. The root READMEs and setup guides link to them, while the
+setup guides remain focused on installation and troubleshooting. The new documents compare Huawei Health
+community, direct Huawei-band management, Huawei Health Kit/web/export MCPs, Xiaomi family-account cloud adapters,
+and the supported Health Connect path without presenting unverified combinations as working integrations.
+
 The bilingual setup guide now explains why the supported architecture avoids both direct wearable management and
 undocumented vendor-cloud APIs. The documented trade-off is explicit: Health Connect adds more moving parts but
 keeps the official companion app intact, avoids storing vendor-account credentials, and lets the downstream
