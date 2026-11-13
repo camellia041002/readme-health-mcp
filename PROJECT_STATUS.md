@@ -5,6 +5,12 @@ Updated: 2026-11-13
 Chinese is now the default repository language: `README.md` is the Chinese entry point, `README.en.md` preserves
 the complete English introduction, and the former `README.zh-CN.md` path remains as a compatibility pointer.
 
+## 2026-11-13 · One-call normalized health summary
+
+- The sanitized public server now exposes `get_health_summary` for one-call daily sleep, vitals, activity, workout, and optional screen-time queries. Sleep-stage and exercise numeric codes are normalized, and low-level tools remain available for drill-down.
+- The public Android source renders that summary as structured reader-audit sections instead of a generic or incomplete card. English and Chinese READMEs document the behavior without private reader names, domains, credentials, deployment paths, or health values.
+- Public backend regression passes 89/89, the Android `assembleMainlineDebug` build passes, `git diff --check` passes, and the changed tree passes the targeted public-content scan. The existing v1.0.1 release APK and tag are unchanged.
+
 The repository role is now explicit: this is the sanitized public release snapshot assembled from the private
 Android and server development sources. Private development remains authoritative; public releases may lag until
 the next deliberate sanitization and release pass. Generic self-hosting API routes remain public by design, while
