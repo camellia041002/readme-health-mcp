@@ -8,6 +8,11 @@ keeps the official companion app intact, avoids storing vendor-account credentia
 ReadMe/server/MCP layers remain reusable when a replacement device exports compatible records.
 The same guide includes neutral, attributed links to representative direct-wearable and Xiaomi-cloud projects.
 They are explicitly marked as untested by ReadMe and are not copied, bundled, endorsed, or supported here.
+It also documents the Xiaomi family-sharing data path and the reason it was not selected: the shorter route relies
+on third-party adapters, undocumented vendor-cloud endpoints, expiring account credentials, and vendor-specific
+fields, which do not match ReadMe's cross-device maintenance boundary.
+Huawei's official Health community is documented as a valid shorter option for in-app family viewing, together
+with its simplified shared fields and the distinction between official in-app viewing and MCP tool access.
 
 Chinese is now the default repository language: `README.md` is the Chinese entry point, `README.en.md` preserves
 the complete English introduction, and the former `README.zh-CN.md` path remains as a compatibility pointer.

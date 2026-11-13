@@ -19,17 +19,36 @@
 当前方案保留官方 App 的正常使用，只在原有健康链路旁边增加一条只读通道。它不修改手环数据，
 也不改变原有配对和历史记录。代价是链路更长，三个手机 App 都需要允许后台运行。
 
+华为官方也提供[家庭空间](https://consumer.huawei.com/cn/support/content/zh-cn15903791/)，可以把
+运动健康数据共享给另一个华为账号，并在华为运动健康 App 中查看。这条路线由官方维护，不需要
+第三方插件，也不影响原有手环连接；如果目标只是让家人或另一个账号在官方 App 中查看，它更短、
+更合适。它的边界也很明确：官方说明中心率和血氧只显示范围，压力只显示日均值，睡眠不包含零星
+小睡，而且只能查看建立共享后产生的数据。家庭空间提供的是官方 App 内的查看能力，本身不会把
+数据变成小机可调用的 MCP 工具，也没有 ReadMe 的独立凭据和“谁看过”查询审计。
+
 另一类较短的方案是使用账号凭据或亲友共享，通过非公开的厂商云接口读取健康数据。这种方式
 通常绑定单一品牌；接口、登录方式和可读字段可能随厂商服务变化，亲友共享还可能缺少压力、
 睡眠分期或高频测量等明细。ReadMe 因此不保存厂商账号凭据，也不依赖这类非公开接口。
+
+以小米亲友共享路线为例，数据通常经过：
+
+`小米手环 → 小米运动健康主账号 → 亲友共享给小号 → 第三方插件或 MCP 使用小号凭据访问小米云`
+
+它不需要手机端再运行一个 Health Connect 桥接 App，链路更短；但实际查询能力来自第三方插件
+对非公开云接口的适配。厂商调整接口、认证流程或返回字段后，插件可能需要跟随修复，登录凭据
+过期时也可能需要重新授权。这个维护边界不符合 ReadMe 希望减少厂商账号依赖、让不同设备共用
+同一后端查询方式的目标，因此没有采用。
 
 选择 Health Connect 是为了把设备适配和小机查询分开。更换手环或手表后，只要新的官方健康
 App 能把所需记录写入 Health Connect，后面的 ReadMe、服务器和 MCP 通常都可以继续沿用。
 
 #### 其他实现参考（未测试）
 
-下面是采用不同取舍的公开项目。ReadMe 没有实际测试这些项目，也不对其兼容性、稳定性或
-安全性作保证；列在这里只是方便需要更短链路或特定品牌方案的人继续了解：
+下面是采用不同取舍的官方能力和公开项目。ReadMe 没有实际测试这些路线，也不对第三方项目的
+兼容性、稳定性或安全性作保证；列在这里只是方便需要更短链路或特定品牌方案的人继续了解：
+
+- [华为运动健康 App 家庭空间（华为官方说明）](https://consumer.huawei.com/cn/support/content/zh-cn15903791/)：
+  适合在官方 App 中向家人或另一个华为账号共享部分健康数据，不是 MCP 实现。
 
 - [`xiaoyou5602/band-health-sync`](https://github.com/xiaoyou5602/band-health-sync)，作者
   [xiaoyou5602](https://github.com/xiaoyou5602)：基于 Gadgetbridge 直接管理支持的华为手环，并把
@@ -40,6 +59,11 @@ App 能把所需记录写入 Health Connect，后面的 ReadMe、服务器和 MC
 - [`Zhou-Ruichen/mi-health-mcp`](https://github.com/Zhou-Ruichen/mi-health-mcp)，作者
   [Zhou-Ruichen](https://github.com/Zhou-Ruichen)：通过小米云端接口读取本人或已授权亲友数据，
   并以 MCP 工具提供查询。
+- [`ridd1ot/xiaomi-health-sync`](https://github.com/ridd1ot/xiaomi-health-sync)，作者
+  [ridd1ot](https://github.com/ridd1ot)：比较本人账号与亲友账号两种读取模式，并把小米云数据
+  同步到本地数据库。
+- [`Misty02600/mi-fitness-python`](https://github.com/Misty02600/mi-fitness-python)，作者
+  [Misty02600](https://github.com/Misty02600)：为部分小米亲友共享实现提供底层接口封装。
 
 ## 2. 部署服务器
 
