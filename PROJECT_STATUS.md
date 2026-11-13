@@ -1,6 +1,11 @@
 # Project status
 
-Updated: 2026-11-13
+Updated: 2026-11-14
+
+The bilingual setup guide now explains why the supported architecture avoids both direct wearable management and
+undocumented vendor-cloud APIs. The documented trade-off is explicit: Health Connect adds more moving parts but
+keeps the official companion app intact, avoids storing vendor-account credentials, and lets the downstream
+ReadMe/server/MCP layers remain reusable when a replacement device exports compatible records.
 
 Chinese is now the default repository language: `README.md` is the Chinese entry point, `README.en.md` preserves
 the complete English introduction, and the former `README.zh-CN.md` path remains as a compatibility pointer.
