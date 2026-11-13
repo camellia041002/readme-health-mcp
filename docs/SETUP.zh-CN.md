@@ -26,6 +26,21 @@
 选择 Health Connect 是为了把设备适配和小机查询分开。更换手环或手表后，只要新的官方健康
 App 能把所需记录写入 Health Connect，后面的 ReadMe、服务器和 MCP 通常都可以继续沿用。
 
+#### 其他实现参考（未测试）
+
+下面是采用不同取舍的公开项目。ReadMe 没有实际测试这些项目，也不对其兼容性、稳定性或
+安全性作保证；列在这里只是方便需要更短链路或特定品牌方案的人继续了解：
+
+- [`xiaoyou5602/band-health-sync`](https://github.com/xiaoyou5602/band-health-sync)，作者
+  [xiaoyou5602](https://github.com/xiaoyou5602)：基于 Gadgetbridge 直接管理支持的华为手环，并把
+  步数、心率和睡眠等数据同步到自托管服务。
+- [`wx10160330-oss/xavier_mi_health`](https://github.com/wx10160330-oss/xavier_mi_health)，作者
+  [wx10160330-oss](https://github.com/wx10160330-oss)：使用小米亲友共享和小号凭据读取数据，
+  面向 AstrBot 插件场景。
+- [`Zhou-Ruichen/mi-health-mcp`](https://github.com/Zhou-Ruichen/mi-health-mcp)，作者
+  [Zhou-Ruichen](https://github.com/Zhou-Ruichen)：通过小米云端接口读取本人或已授权亲友数据，
+  并以 MCP 工具提供查询。
+
 ## 2. 部署服务器
 
 ```bash

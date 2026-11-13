@@ -31,6 +31,22 @@ Health Connect separates device compatibility from assistant access. After chang
 server, and MCP layers can usually remain unchanged as long as the new companion app writes the required records
 to Health Connect.
 
+#### Alternative implementations (not tested by ReadMe)
+
+The following public projects make different architecture trade-offs. The ReadMe project has not tested them and
+does not guarantee their compatibility, stability, or security. They are listed only as neutral pointers for
+people who prefer a shorter path or a vendor-specific integration:
+
+- [`xiaoyou5602/band-health-sync`](https://github.com/xiaoyou5602/band-health-sync), by
+  [xiaoyou5602](https://github.com/xiaoyou5602): uses a Gadgetbridge-based app to manage supported Huawei bands
+  directly and synchronize steps, heart rate, sleep, and other records to a self-hosted service.
+- [`wx10160330-oss/xavier_mi_health`](https://github.com/wx10160330-oss/xavier_mi_health), by
+  [wx10160330-oss](https://github.com/wx10160330-oss): reads data through Xiaomi family sharing and a secondary
+  account credential for an AstrBot plugin workflow.
+- [`Zhou-Ruichen/mi-health-mcp`](https://github.com/Zhou-Ruichen/mi-health-mcp), by
+  [Zhou-Ruichen](https://github.com/Zhou-Ruichen): reads the signed-in Xiaomi account or authorized relatives
+  through Xiaomi cloud endpoints and exposes the result as MCP tools.
+
 ## 2. Deploy the server
 
 ```bash
