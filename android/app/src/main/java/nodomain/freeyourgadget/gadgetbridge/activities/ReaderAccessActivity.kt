@@ -260,9 +260,89 @@ class ReaderAccessActivity : AppCompatActivity() {
                         }
                     }
                 }
+                "health_summary" -> addHealthSummaryRows(rows, sections, summary)
             }
         }
         return rows.distinct()
+    }
+
+    private fun addHealthSummaryRows(rows: MutableList<DetailRow>, sections: MutableSet<String>, summary: JSONObject) {
+        summary.optJSONObject("sleep")?.let { sleep ->
+            val main = sleep.optJSONObject("main_sleep")
+            if (main != null && sections.add("睡眠")) {
+                rows.add(DetailRow("睡眠", section = true))
+                rows.add(DetailRow("睡眠时段", formatSleepRange(main.optString("start"), main.optString("end"))))
+                if (main.has("minutes") && !main.isNull("minutes")) {
+                    rows.add(DetailRow("总时长", formatDuration(main.optDouble("minutes").toInt())))
+                }
+            }
+            val totals = sleep.optJSONArray("stage_totals")
+            if (totals != null && totals.length() > 0 && sections.add("睡眠阶段")) {
+                rows.add(DetailRow("睡眠阶段", section = true))
+                val byStage = (0 until totals.length()).mapNotNull { totals.optJSONObject(it) }
+                    .associateBy { it.optString("stage") }
+                listOf("deep", "light", "rem", "awake", "sleeping", "unknown").forEach { key ->
+                    val stage = byStage[key] ?: return@forEach
+                    rows.add(DetailRow(
+                        stageLabel(key),
+                        "${formatDuration((stage.optDouble("seconds") / 60.0).toInt())}　${formatNumber(stage.optDouble("percent"))}%"
+                    ))
+                }
+            }
+        }
+
+        val vitalMetrics = summary.optJSONObject("vitals")?.optJSONArray("metrics")
+        if (vitalMetrics != null) for (i in 0 until vitalMetrics.length()) {
+            val metric = vitalMetrics.optJSONObject(i) ?: continue
+            val name = healthMetricLabel(metric.optString("metric"))
+            if (sections.add(name)) rows.add(DetailRow(name, section = true))
+            val unit = healthUnitLabel(metric.optString("unit"))
+            if (metric.has("latest") && !metric.isNull("latest")) {
+                rows.add(DetailRow("最新", "${formatNumber(metric.optDouble("latest"))}$unit"))
+            }
+            if (metric.has("minimum") && !metric.isNull("minimum")) {
+                rows.add(DetailRow("范围", "${formatNumber(metric.optDouble("minimum"))}–${formatNumber(metric.optDouble("maximum"))}$unit"))
+                rows.add(DetailRow("平均", "${formatNumber(metric.optDouble("average"))}$unit"))
+                rows.add(DetailRow("记录", "${metric.optInt("count")}条"))
+            }
+        }
+
+        val activity = summary.optJSONObject("activity")
+        val activityMetrics = activity?.optJSONArray("metrics")
+        if (activityMetrics != null && activityMetrics.length() > 0 && sections.add("活动")) {
+            rows.add(DetailRow("活动", section = true))
+            for (i in 0 until activityMetrics.length()) {
+                val metric = activityMetrics.optJSONObject(i) ?: continue
+                val unit = healthUnitLabel(metric.optString("unit"))
+                rows.add(DetailRow(
+                    healthMetricLabel(metric.optString("metric")),
+                    "${formatNumber(metric.optDouble("total"))}$unit"
+                ))
+            }
+        }
+        val workouts = activity?.optJSONArray("workouts")
+        if (workouts != null && workouts.length() > 0 && sections.add("运动")) {
+            rows.add(DetailRow("运动", section = true))
+            for (i in 0 until workouts.length()) {
+                val workout = workouts.optJSONObject(i) ?: continue
+                val minutes = workout.optDouble("minutes", 0.0).toInt()
+                rows.add(DetailRow(
+                    activityLabel(workout.optString("activity")),
+                    "${formatClock(workout.optString("start"))}　${formatDuration(minutes)}"
+                ))
+            }
+        }
+
+        val screen = summary.optJSONObject("screen_time")
+        val apps = screen?.optJSONArray("apps")
+        if (screen != null && apps != null && sections.add("屏幕使用")) {
+            rows.add(DetailRow("屏幕使用", section = true))
+            rows.add(DetailRow("总计", "${formatNumber(screen.optDouble("total_minutes"))}分钟"))
+            for (i in 0 until apps.length()) {
+                val app = apps.optJSONObject(i) ?: continue
+                rows.add(DetailRow(app.optString("app", "应用"), "${formatNumber(app.optDouble("minutes"))}分钟"))
+            }
+        }
     }
 
     private fun addScreenTimeRows(rows: MutableList<DetailRow>, sections: MutableSet<String>, summary: JSONObject) {
@@ -363,6 +443,7 @@ class ReaderAccessActivity : AppCompatActivity() {
         "list_data_types", "describe_data_type", "list_health_connect_record_types" -> "查看可用数据"
         "list_workouts", "get_workout" -> "查看运动记录"
         "get_session_data" -> "查看睡眠记录"
+        "get_health_summary" -> "查看每日健康汇总"
         else -> "读取健康数据"
     }
 
@@ -409,6 +490,11 @@ class ReaderAccessActivity : AppCompatActivity() {
             "oxygen_saturation" -> metricLine(summary, "血氧", "%")
             "steps" -> metricLine(summary, "步数", "步")
             "screen_time" -> screenTimeLines(summary)
+            "health_summary" -> buildList {
+                val detailRows = mutableListOf<DetailRow>()
+                addHealthSummaryRows(detailRows, mutableSetOf(), summary)
+                detailRows.forEach { row -> add(if (row.section) row.label else "${row.label}：${row.value}") }
+            }.joinToString("\n")
             "metric_intervals" -> if (summary.optString("unit") == "count") metricLine(summary, "步数", "步") else genericMetricLine(summary)
             "metric_points" -> if (summary.optString("unit") == "bpm") metricLine(summary, "心率", "次/分") else genericMetricLine(summary)
             else -> {
@@ -462,7 +548,50 @@ class ReaderAccessActivity : AppCompatActivity() {
         "light" -> "浅睡"
         "rem" -> "快速眼动"
         "awake" -> "清醒"
+        "sleeping" -> "睡眠"
+        "unknown" -> "未分类"
         else -> "其他"
+    }
+
+    private fun healthMetricLabel(value: String): String = when (value) {
+        "heart_rate" -> "心率"
+        "resting_heart_rate" -> "静息心率"
+        "heart_rate_variability" -> "心率变异性"
+        "oxygen_saturation" -> "血氧"
+        "respiratory_rate" -> "呼吸率"
+        "blood_pressure" -> "血压"
+        "weight" -> "体重"
+        "height" -> "身高"
+        "body_fat" -> "体脂"
+        "lean_body_mass" -> "瘦体重"
+        "bone_mass" -> "骨量"
+        "body_water_mass" -> "身体水分"
+        "body_temperature" -> "体温"
+        "steps" -> "步数"
+        "distance" -> "距离"
+        "active_calories" -> "活动热量"
+        "total_calories" -> "总热量"
+        "hydration" -> "饮水"
+        else -> value
+    }
+
+    private fun healthUnitLabel(value: String): String = when (value) {
+        "bpm" -> "次/分"
+        "count" -> "步"
+        "kcal" -> "千卡"
+        "min" -> "分钟"
+        else -> value
+    }
+
+    private fun activityLabel(value: String): String = when (value) {
+        "walking" -> "步行"
+        "running" -> "跑步"
+        "biking" -> "骑行"
+        "swimming_pool", "swimming_open_water" -> "游泳"
+        "strength_training", "weightlifting" -> "力量训练"
+        "yoga" -> "瑜伽"
+        "hiking" -> "徒步"
+        else -> value.replace('_', ' ')
     }
 
     private fun formatClock(raw: String): String = runCatching {

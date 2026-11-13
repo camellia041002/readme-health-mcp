@@ -25,11 +25,15 @@ server. The server is a personal health-data source, not a clinician.
 1. Establish the requested date range, timezone, person/device scope, and unit
    assumptions. Ask one concise clarification when a missing choice could alter
    the result.
-2. Call `list_data_types` before making assumptions about available records.
-3. Call `describe_data_type` for each relevant type. Record fields, units,
-   source/device metadata, and whether the type is projected or raw.
-4. Use the narrowest typed read tool (`query_records`, `list_workouts`,
-   `get_workout`, `get_session_data`, `aggregate`, or `summarize_trends`). Use
+2. For an ordinary daily question, call `get_health_summary` once with the
+   requested local date and only the needed sections (`sleep`, `vitals`,
+   `activity`, and/or `screen_time`). Do not split a sleep summary into a
+   session lookup plus a second stage lookup.
+3. Use `list_data_types` and `describe_data_type` only when the user asks about
+   an uncommon field, raw record availability, or schema/coverage details.
+4. For drill-down, use the narrowest low-level tool (`query_records`,
+   `list_workouts`, `get_workout`, `get_session_data`, `aggregate`, or
+   `summarize_trends`). Use
    `list_health_connect_record_types` when the question concerns raw Android
    record kinds. If the typed surface cannot express a request, report the
    limitation instead of attempting a database query.

@@ -15,11 +15,12 @@ import re
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 from functools import wraps
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 from fastapi.responses import HTMLResponse, RedirectResponse
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -145,6 +146,61 @@ _ALIAS_TO_TYPE = {
     "exercise": "workouts",
     "workout": "workouts",
 }
+
+HEALTH_SUMMARY_SECTIONS = ("sleep", "vitals", "activity", "screen_time")
+
+SLEEP_STAGE_NAMES = {
+    "0": "unknown",
+    "1": "awake",
+    "2": "sleeping",
+    "3": "awake",
+    "4": "light",
+    "5": "deep",
+    "6": "rem",
+    "7": "awake",
+    "unknown": "unknown",
+    "awake": "awake",
+    "awake_in_bed": "awake",
+    "awake_out_of_bed": "awake",
+    "out_of_bed": "awake",
+    "sleeping": "sleeping",
+    "light": "light",
+    "sleeping_light": "light",
+    "deep": "deep",
+    "sleeping_deep": "deep",
+    "rem": "rem",
+    "sleeping_rem": "rem",
+}
+
+EXERCISE_TYPE_NAMES = {
+    "0": "other_workout", "2": "badminton", "4": "baseball", "5": "basketball",
+    "8": "biking", "9": "biking_stationary", "10": "boot_camp", "11": "boxing",
+    "13": "calisthenics", "14": "cricket", "16": "dancing", "25": "elliptical",
+    "26": "exercise_class", "27": "fencing", "28": "football_american",
+    "29": "football_australian", "31": "frisbee_disc", "32": "golf",
+    "33": "guided_breathing", "34": "gymnastics", "35": "handball",
+    "36": "high_intensity_interval_training", "37": "hiking", "38": "ice_hockey",
+    "39": "ice_skating", "44": "martial_arts", "46": "paddling",
+    "47": "paragliding", "48": "pilates", "50": "racquetball", "51": "rock_climbing",
+    "52": "roller_hockey", "53": "rowing", "54": "rowing_machine", "55": "rugby",
+    "56": "running", "57": "running_treadmill", "58": "sailing", "59": "scuba_diving",
+    "60": "skating", "61": "skiing", "62": "snowboarding", "63": "snowshoeing",
+    "64": "soccer", "65": "softball", "66": "squash", "68": "stair_climbing",
+    "69": "stair_climbing_machine", "70": "strength_training", "71": "stretching",
+    "72": "surfing", "73": "swimming_open_water", "74": "swimming_pool",
+    "75": "table_tennis", "76": "tennis", "78": "volleyball", "79": "walking",
+    "80": "water_polo", "81": "weightlifting", "82": "wheelchair", "83": "yoga",
+}
+
+
+def _normalize_sleep_stage(value: object) -> str:
+    key = str(value if value is not None else "unknown").strip().lower().replace("-", "_").replace(" ", "_")
+    return SLEEP_STAGE_NAMES.get(key, key or "unknown")
+
+
+def _normalize_exercise_type(value: object) -> str:
+    key = str(value if value is not None else "other_workout").strip().lower().replace("-", "_").replace(" ", "_")
+    return EXERCISE_TYPE_NAMES.get(key, key or "other_workout")
 
 
 def _resolve_type(data_type: str) -> tuple[str, dict[str, Any]]:
@@ -391,7 +447,10 @@ mcp = MCPServer(
     "HealthQueryDirect",
     instructions=(
         "Read-only HealthQuery data access. Tools expose locally stored health "
-        "records and safe aggregate/query output. No health-data mutation tools are available."
+        "records and safe aggregate/query output. Prefer get_health_summary for ordinary "
+        "daily questions so sleep stages, vital summaries, activity totals, workouts, and "
+        "optional screen time arrive in one call. Use low-level tools only for drill-down. "
+        "No health-data mutation tools are available."
     ),
     auth=AuthSettings(
         issuer_url=oauth_issuer(),
@@ -563,9 +622,14 @@ async def list_workouts(
     limit: int = 100,
 ) -> dict[str, object]:
     """List bounded workout sessions."""
-    return await _query_records_impl(
+    result = await _query_records_impl(
         "workouts", start_date=start_date, end_date=end_date, limit=limit, audit_tool="list_workouts"
     )
+    for row in result.get("rows", []):
+        if isinstance(row, dict):
+            row["activity_type_raw"] = row.get("activity_type")
+            row["activity_type"] = _normalize_exercise_type(row.get("activity_type"))
+    return result
 
 
 @mcp.tool()
@@ -576,8 +640,37 @@ async def get_workout(workout_key: str) -> dict[str, object]:
     if not key:
         raise ValueError("workout_key is required")
     result = await _post_query(f"SELECT * FROM workouts WHERE workout_key = {_sql_quote(key)} LIMIT 1")
+    for row in result.get("rows", []):
+        if isinstance(row, dict):
+            row["activity_type_raw"] = row.get("activity_type")
+            row["activity_type"] = _normalize_exercise_type(row.get("activity_type"))
     await _audit_read("get_workout", data_types=["workouts"], returned_rows=len(result.get("rows", [])))
     return {"workout_key": key, **result}
+
+
+def _summarize_sleep_stages(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, object]]]:
+    normalized_rows: list[dict[str, Any]] = []
+    stage_totals: dict[str, int] = {}
+    for original in rows:
+        row = dict(original)
+        row["stage_type_raw"] = row.get("stage_type")
+        row["stage_type"] = _normalize_sleep_stage(row.get("stage_type"))
+        seconds = max(0, int(float(row.get("duration_seconds") or 0)))
+        row["duration_seconds"] = seconds
+        stage_totals[row["stage_type"]] = stage_totals.get(row["stage_type"], 0) + seconds
+        normalized_rows.append(row)
+    total_seconds = sum(stage_totals.values())
+    order = {name: index for index, name in enumerate(("deep", "light", "rem", "awake", "sleeping", "unknown"))}
+    totals = [
+        {
+            "stage": stage,
+            "seconds": seconds,
+            "minutes": round(seconds / 60, 1),
+            "percent": round(seconds * 100 / total_seconds, 1) if total_seconds else 0.0,
+        }
+        for stage, seconds in sorted(stage_totals.items(), key=lambda item: (order.get(item[0], 99), item[0]))
+    ]
+    return normalized_rows, totals
 
 
 @mcp.tool()
@@ -590,12 +683,8 @@ async def get_session_data(session_key: str) -> dict[str, object]:
     session = await _post_query(f"SELECT * FROM sleep_sessions WHERE session_key = {_sql_quote(key)} LIMIT 1")
     stages = await _post_query(f"SELECT * FROM sleep_stages WHERE session_key = {_sql_quote(key)} ORDER BY start_time ASC LIMIT {MAX_TOOL_ROWS}")
     stage_rows = [row for row in stages.get("rows", []) if isinstance(row, dict)]
-    stage_totals: dict[str, int] = {}
-    for row in stage_rows:
-        stage = str(row.get("stage_type") or "unknown")
-        seconds = int(row.get("duration_seconds") or 0)
-        stage_totals[stage] = stage_totals.get(stage, 0) + max(0, seconds)
-    stage_total_seconds = sum(stage_totals.values())
+    normalized_stage_rows, stage_totals = _summarize_sleep_stages(stage_rows)
+    stages = {**stages, "rows": normalized_stage_rows, "row_count": len(normalized_stage_rows)}
     await _audit_read(
         "get_session_data",
         data_types=["sleep_sessions", "sleep_stages"],
@@ -604,19 +693,243 @@ async def get_session_data(session_key: str) -> dict[str, object]:
             **(_bounded_result_summary("sleep_sessions", session) or {}),
             "stages": [
                 {"stage": row.get("stage_type"), "start": row.get("start_time"), "end": row.get("end_time"), "seconds": row.get("duration_seconds")}
-                for row in stage_rows[:40]
+                for row in normalized_stage_rows[:40]
             ],
-            "stage_totals": [
-                {
-                    "stage": stage,
-                    "seconds": seconds,
-                    "percent": round(seconds * 100 / stage_total_seconds, 1) if stage_total_seconds else 0.0,
-                }
-                for stage, seconds in stage_totals.items()
-            ],
+            "stage_totals": stage_totals,
         },
     )
-    return {"session_key": key, "session": session, "stages": stages}
+    return {"session_key": key, "session": session, "stages": stages, "stage_totals": stage_totals}
+
+
+def _health_summary_date(value: str | None) -> date:
+    return _parse_date(value) or datetime.now(ZoneInfo(LOCAL_TIME_ZONE_LABEL)).date()
+
+
+async def _sleep_health_summary(target: date) -> tuple[dict[str, object], int]:
+    date_clause = _date_filter("end_time", target, target)
+    sessions = await _post_query(
+        "SELECT session_key, source, start_time, end_time, duration_minutes, efficiency_pct "
+        f"FROM sleep_sessions WHERE {date_clause} "
+        "ORDER BY duration_minutes DESC, end_time DESC LIMIT 20"
+    )
+    session_rows = [row for row in sessions.get("rows", []) if isinstance(row, dict)]
+    if not session_rows:
+        return {"session_count": 0, "main_sleep": None, "other_sessions": [], "stage_totals": [], "stage_intervals": []}, 0
+
+    main = session_rows[0]
+    stages = await _post_query(
+        "SELECT stage_type, start_time, end_time, duration_seconds "
+        f"FROM sleep_stages WHERE session_key = {_sql_quote(str(main.get('session_key') or ''))} "
+        f"ORDER BY start_time ASC LIMIT {MAX_TOOL_ROWS}"
+    )
+    stage_rows = [row for row in stages.get("rows", []) if isinstance(row, dict)]
+    normalized_stages, stage_totals = _summarize_sleep_stages(stage_rows)
+
+    def session_view(row: dict[str, Any]) -> dict[str, object]:
+        return {
+            "start": row.get("start_time"),
+            "end": row.get("end_time"),
+            "minutes": row.get("duration_minutes"),
+            "efficiency_percent": row.get("efficiency_pct"),
+        }
+
+    return {
+        "session_count": len(session_rows),
+        "main_sleep": session_view(main),
+        "other_sessions": [session_view(row) for row in session_rows[1:]],
+        "stage_totals": stage_totals,
+        "stage_intervals": [
+            {
+                "stage": row.get("stage_type"),
+                "start": row.get("start_time"),
+                "end": row.get("end_time"),
+                "seconds": row.get("duration_seconds"),
+            }
+            for row in normalized_stages
+        ],
+    }, len(session_rows) + len(normalized_stages)
+
+
+async def _vitals_health_summary(target: date) -> tuple[dict[str, object], int]:
+    date_clause = _date_filter("recorded_at", target, target)
+    aggregates = await _post_query(
+        "SELECT metric_type, unit, COUNT(*) AS record_count, "
+        "MIN(numeric_value) AS minimum, MAX(numeric_value) AS maximum, "
+        "AVG(numeric_value) AS average "
+        f"FROM metric_points WHERE {date_clause} "
+        "GROUP BY metric_type, unit ORDER BY metric_type ASC"
+    )
+    metrics: list[dict[str, object]] = []
+    total_rows = 0
+    for row in aggregates.get("rows", []):
+        if not isinstance(row, dict) or not row.get("metric_type"):
+            continue
+        metric_type = str(row["metric_type"])
+        latest = await _post_query(
+            "SELECT recorded_at, numeric_value, text_value, unit FROM metric_points "
+            f"WHERE {date_clause} AND metric_type = {_sql_quote(metric_type)} "
+            "ORDER BY recorded_at DESC LIMIT 1"
+        )
+        latest_row = next((item for item in latest.get("rows", []) if isinstance(item, dict)), {})
+        details = None
+        if isinstance(latest_row.get("text_value"), str):
+            try:
+                decoded = json.loads(str(latest_row["text_value"]))
+                details = decoded if isinstance(decoded, dict) else None
+            except json.JSONDecodeError:
+                details = None
+        count = int(row.get("record_count") or 0)
+        total_rows += count
+        metrics.append({
+            "metric": metric_type,
+            "unit": row.get("unit") or latest_row.get("unit"),
+            "count": count,
+            "minimum": row.get("minimum"),
+            "maximum": row.get("maximum"),
+            "average": round(float(row["average"]), 1) if isinstance(row.get("average"), (int, float)) else None,
+            "latest": latest_row.get("numeric_value"),
+            "latest_at": latest_row.get("recorded_at"),
+            "latest_details": details,
+        })
+    return {"metrics": metrics}, total_rows
+
+
+async def _activity_health_summary(target: date) -> tuple[dict[str, object], int]:
+    date_clause = _date_filter("start_time", target, target)
+    aggregates = await _post_query(
+        "SELECT metric_type, unit, COUNT(*) AS record_count, "
+        "SUM(numeric_value) AS total, MIN(numeric_value) AS minimum, "
+        "MAX(numeric_value) AS maximum, AVG(numeric_value) AS average "
+        f"FROM metric_intervals WHERE {date_clause} AND metric_type != 'screen_time' "
+        "GROUP BY metric_type, unit ORDER BY metric_type ASC"
+    )
+    metrics: list[dict[str, object]] = []
+    total_rows = 0
+    for row in aggregates.get("rows", []):
+        if not isinstance(row, dict):
+            continue
+        count = int(row.get("record_count") or 0)
+        total_rows += count
+        metrics.append({
+            "metric": row.get("metric_type"),
+            "unit": row.get("unit"),
+            "count": count,
+            "total": row.get("total"),
+            "minimum": row.get("minimum"),
+            "maximum": row.get("maximum"),
+            "average": round(float(row["average"]), 1) if isinstance(row.get("average"), (int, float)) else None,
+        })
+
+    workouts_result = await _post_query(
+        "SELECT activity_type, start_time, end_time, duration_minutes, calories, avg_hr "
+        f"FROM workouts WHERE {date_clause} ORDER BY start_time ASC LIMIT {MAX_TOOL_ROWS}"
+    )
+    workouts = []
+    for row in workouts_result.get("rows", []):
+        if not isinstance(row, dict):
+            continue
+        workouts.append({
+            "activity": _normalize_exercise_type(row.get("activity_type")),
+            "activity_raw": row.get("activity_type"),
+            "start": row.get("start_time"),
+            "end": row.get("end_time"),
+            "minutes": row.get("duration_minutes"),
+            "calories": row.get("calories"),
+            "average_heart_rate": row.get("avg_hr"),
+        })
+    total_rows += len(workouts)
+    return {"metrics": metrics, "workouts": workouts}, total_rows
+
+
+async def _screen_time_health_summary(target: date) -> tuple[dict[str, object], int]:
+    date_clause = _date_filter("start_time", target, target)
+    result = await _post_query(
+        "SELECT numeric_value, text_value, unit FROM metric_intervals "
+        f"WHERE {date_clause} AND metric_type = 'screen_time' "
+        f"ORDER BY numeric_value DESC LIMIT {MAX_TOOL_ROWS}"
+    )
+    by_app: dict[str, float] = {}
+    row_count = 0
+    for row in result.get("rows", []):
+        if not isinstance(row, dict) or not isinstance(row.get("numeric_value"), (int, float)):
+            continue
+        row_count += 1
+        app_name = "Unknown app"
+        if isinstance(row.get("text_value"), str):
+            try:
+                decoded = json.loads(str(row["text_value"]))
+                if isinstance(decoded, dict):
+                    app_name = str(decoded.get("app") or decoded.get("package") or app_name)
+            except json.JSONDecodeError:
+                pass
+        by_app[app_name] = by_app.get(app_name, 0.0) + float(row["numeric_value"])
+    apps = [
+        {"app": app, "minutes": round(minutes, 1)}
+        for app, minutes in sorted(by_app.items(), key=lambda item: (-item[1], item[0]))
+    ]
+    return {"total_minutes": round(sum(by_app.values()), 1), "apps": apps}, row_count
+
+
+@mcp.tool()
+@_audit_read_failures(
+    "get_health_summary",
+    ["metric_points", "metric_intervals", "sleep_sessions", "sleep_stages", "workouts"],
+)
+async def get_health_summary(
+    target_date: str | None = None,
+    sections: list[str] | None = None,
+) -> dict[str, object]:
+    """Return a complete one-call daily summary from normalized Health Connect data.
+
+    ``target_date`` is the Asia/Shanghai calendar date; sleep is assigned to
+    the date on which the main session ended. ``sections`` can limit the call
+    to sleep, vitals, activity, and/or screen_time. Omitting it returns all
+    four sections. Sleep stage codes and exercise codes are translated to
+    stable names, and stage durations and percentages are calculated here so
+    callers never need to join low-level records themselves.
+    """
+    target = _health_summary_date(target_date)
+    requested = list(HEALTH_SUMMARY_SECTIONS) if sections is None else [str(item).strip().lower() for item in sections]
+    if not requested:
+        raise ValueError("sections must contain at least one section")
+    unknown = sorted(set(requested) - set(HEALTH_SUMMARY_SECTIONS))
+    if unknown:
+        raise ValueError(f"Unknown health summary sections: {', '.join(unknown)}")
+    requested = list(dict.fromkeys(requested))
+
+    response: dict[str, object] = {
+        "date": target.isoformat(),
+        "timezone": LOCAL_TIME_ZONE_LABEL,
+        "sections": requested,
+    }
+    total_rows = 0
+    data_types: list[str] = []
+    if "sleep" in requested:
+        response["sleep"], count = await _sleep_health_summary(target)
+        total_rows += count
+        data_types.extend(["sleep_sessions", "sleep_stages"])
+    if "vitals" in requested:
+        response["vitals"], count = await _vitals_health_summary(target)
+        total_rows += count
+        data_types.append("metric_points")
+    if "activity" in requested:
+        response["activity"], count = await _activity_health_summary(target)
+        total_rows += count
+        data_types.extend(["metric_intervals", "workouts"])
+    if "screen_time" in requested:
+        response["screen_time"], count = await _screen_time_health_summary(target)
+        total_rows += count
+        data_types.append("metric_intervals")
+
+    await _audit_read(
+        "get_health_summary",
+        data_types=data_types,
+        start_date=target,
+        end_date=target,
+        returned_rows=total_rows,
+        result_summary={"kind": "health_summary", **response},
+    )
+    return response
 
 
 @mcp.tool()

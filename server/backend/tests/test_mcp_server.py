@@ -174,6 +174,26 @@ def test_reader_audit_summary_keeps_screen_time_apps_and_total():
     ]
 
 
+def test_health_summary_normalizes_android_sleep_and_exercise_codes():
+    rows, totals = mcp_server._summarize_sleep_stages([
+        {"stage_type": 1, "duration_seconds": 600},
+        {"stage_type": "4", "duration_seconds": 1_800},
+        {"stage_type": 5, "duration_seconds": 1_200},
+        {"stage_type": 6, "duration_seconds": 600},
+        {"stage_type": 7, "duration_seconds": 300},
+    ])
+
+    assert [row["stage_type"] for row in rows] == ["awake", "light", "deep", "rem", "awake"]
+    by_stage = {item["stage"]: item for item in totals}
+    assert by_stage["awake"]["seconds"] == 900
+    assert by_stage["light"]["percent"] == 40.0
+    assert by_stage["deep"]["percent"] == 26.7
+    assert by_stage["rem"]["percent"] == 13.3
+    assert mcp_server._normalize_exercise_type(79) == "walking"
+    assert mcp_server._normalize_exercise_type("56") == "running"
+    assert mcp_server._normalize_exercise_type("yoga") == "yoga"
+
+
 @pytest.mark.asyncio
 async def test_mcp_server_tools_read_from_backend_via_stdio():
     await init_db()
@@ -244,6 +264,7 @@ async def test_mcp_server_tools_read_from_backend_via_stdio():
                 "list_workouts",
                 "get_workout",
                 "get_session_data",
+                "get_health_summary",
                 "aggregate",
                 "get_data_coverage",
                 "summarize_trends",
@@ -275,6 +296,31 @@ async def test_mcp_server_tools_read_from_backend_via_stdio():
             assert raw_types.structured_content["rows"][0]["record_type"] == "android.health.connect.datatypes.HeartRateRecord"
             raw = await client.call_tool("query_records", {"data_type": "health_connect_records", "limit": 5})
             assert '"nested":{"source":"watch"}' in raw.structured_content["rows"][0]["payload_json"]
+
+            summary = await client.call_tool(
+                "get_health_summary",
+                {"target_date": "2026-06-11", "sections": ["sleep", "vitals", "activity"]},
+            )
+            assert summary.structured_content["sleep"]["main_sleep"]["minutes"] == 470
+            assert summary.structured_content["sleep"]["stage_totals"] == [
+                {"stage": "light", "seconds": 6600, "minutes": 110.0, "percent": 100.0}
+            ]
+            heart_rate = next(
+                item for item in summary.structured_content["vitals"]["metrics"]
+                if item["metric"] == "heart_rate"
+            )
+            assert heart_rate["latest"] == 61
+            activity = {
+                item["metric"]: item for item in summary.structured_content["activity"]["metrics"]
+            }
+            assert activity["steps"]["total"] == 8420
+            assert activity["distance"]["total"] == 6200
+            assert activity["active_calories"]["total"] == 780
+            workout_day = await client.call_tool(
+                "get_health_summary",
+                {"target_date": "2026-06-12", "sections": ["activity"]},
+            )
+            assert workout_day.structured_content["activity"]["workouts"][0]["activity"] == "walking"
 
             too_many = await client.call_tool(
                 "query_records",

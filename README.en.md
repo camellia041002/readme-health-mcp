@@ -35,6 +35,8 @@ The Android app also provides a local dashboard and an optional screen-time sour
 
 Data availability depends on what the wearable's companion app or Health Sync writes into Health Connect. The reference setup is Huawei Band 10 with Huawei Health and Health Sync; other devices can work when they populate compatible Health Connect records.
 
+For ordinary daily questions, MCP clients can request one normalized summary instead of joining several low-level records. The summary includes available sleep-stage durations and percentages, vitals, activity, workouts, and optional screen time; Android numeric sleep and exercise codes are translated into stable names.
+
 ## Privacy model
 
 - Health data is read only. The project does not edit Health Connect records.

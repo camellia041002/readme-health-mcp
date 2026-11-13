@@ -105,6 +105,7 @@ Compatibility note: Client ID Metadata Documents are preferred and supported wit
 
 The generic read-only tools are:
 
+- `get_health_summary` (preferred one-call daily summary for sleep, vitals, activity, workouts, and optional screen time)
 - `list_data_types`
 - `describe_data_type`
 - `query_records`
@@ -119,6 +120,13 @@ The generic read-only tools are:
 The bounded raw-record-type catalog gets five seconds so a cold SQLite cache
 does not make the typed discovery tool unreliable. MCP exposes only typed,
 bounded read tools and cannot execute free-form SQL or mutate health data.
+
+For ordinary questions such as “how did I sleep last night?” or “summarize
+today,” clients should call `get_health_summary` once. It translates Android
+sleep-stage and exercise codes, chooses the main sleep session by wake date,
+and returns stage durations/percentages plus available daily metrics. The
+lower-level catalog, record, aggregate, and session tools remain available for
+drill-down and troubleshooting.
 
 Remote OAuth supports current Client ID Metadata Documents (CIMD), with dynamic
 client registration retained as a compatibility fallback for existing clients.
