@@ -54,7 +54,6 @@ object HealthQueryPairingParser {
             (a == 172 && b in 16..31) || (a == 100 && b in 64..127)
     }
 }
-
 /** Converts the already-bounded Gadgetbridge projection into HealthQuery's lossless device format. */
 object HealthQueryPayloadMapper {
     private const val PROTOCOL_VERSION = 1
@@ -110,6 +109,17 @@ object HealthQueryPayloadMapper {
                 .put("endTime", DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(end))
                 .put("samples", samples)))
         }
+        day.body.optJSONArray("oxygen_saturation")?.let { points ->
+            for (i in 0 until points.length()) {
+                val point = points.optJSONObject(i) ?: continue
+                val time = point.optString("time")
+                val percentage = point.optDouble("percentage", -1.0)
+                if (time.isBlank() || percentage !in 0.0..100.0) continue
+                out.put(envelope("OxygenSaturationRecord", "gb-oxygen-${digest(time).take(24)}", JSONObject()
+                    .put("time", time)
+                    .put("percentage", percentage)))
+            }
+        }
         day.body.optJSONArray("sleep")?.let { sessions ->
             for (i in 0 until sessions.length()) {
                 val session = sessions.optJSONObject(i) ?: continue
@@ -143,6 +153,32 @@ object HealthQueryPayloadMapper {
                     .put("startTime", from)
                     .put("endTime", to)
                     .put("exerciseType", workout.optInt("raw_type", 0).toString())))
+            }
+        }
+        day.body.optJSONArray("active_calories")?.let { intervals ->
+            for (i in 0 until intervals.length()) {
+                val interval = intervals.optJSONObject(i) ?: continue
+                val from = interval.optString("start_time")
+                val to = interval.optString("end_time")
+                val calories = interval.optDouble("calories", -1.0)
+                if (from.isBlank() || to.isBlank() || calories < 0) continue
+                out.put(envelope("ActiveCaloriesBurnedRecord", "gb-active-calories-${digest("$from:$to").take(24)}", JSONObject()
+                    .put("startTime", from)
+                    .put("endTime", to)
+                    .put("energy", JSONObject().put("value", calories).put("type", "KILOCALORIES"))))
+            }
+        }
+        day.body.optJSONArray("menstruation_periods")?.let { periods ->
+            for (i in 0 until periods.length()) {
+                val period = periods.optJSONObject(i) ?: continue
+                val from = period.optString("start_time")
+                val to = period.optString("end_time")
+                val days = period.optLong("duration_days", -1L)
+                if (from.isBlank() || to.isBlank()) continue
+                out.put(envelope("MenstruationPeriodRecord", "gb-period-${digest("$from:$to").take(24)}", JSONObject()
+                    .put("startTime", from)
+                    .put("endTime", to)
+                    .put("durationDays", days.takeIf { it > 0 } ?: 1L)))
             }
         }
         day.body.optJSONArray("screen_time")?.let { apps ->

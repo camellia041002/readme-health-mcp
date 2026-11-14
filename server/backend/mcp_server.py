@@ -84,12 +84,12 @@ DATA_TYPES: dict[str, dict[str, Any]] = {
     },
     "metric_intervals": {
         "label": "Interval metrics",
-        "categories": ["activity", "hydration", "mindfulness", "digital_wellbeing"],
+        "categories": ["activity", "hydration", "mindfulness", "digital_wellbeing", "cycle"],
         "table": "metric_intervals",
         "time_column": "start_time",
         "columns": ["record_key", "source", "metric_type", "start_time", "end_time", "numeric_value", "text_value", "unit", "updated_at"],
         "value_columns": ["numeric_value"],
-        "description": "Metrics measured over intervals, including steps, distance, calories, hydration, mindfulness, and Android screen time.",
+        "description": "Metrics measured over intervals, including steps, distance, calories, hydration, mindfulness, menstrual periods, and Android screen time.",
     },
     "sleep_sessions": {
         "label": "Sleep sessions",
@@ -120,7 +120,7 @@ DATA_TYPES: dict[str, dict[str, Any]] = {
     },
     "health_connect_records": {
         "label": "Health Connect records",
-        "categories": ["raw", "activity", "sleep", "vitals", "body", "nutrition", "hydration", "mindfulness"],
+        "categories": ["raw", "activity", "sleep", "vitals", "body", "nutrition", "hydration", "mindfulness", "cycle"],
         "table": "health_connect_records",
         "time_column": "updated_at",
         "columns": ["device_id", "record_type", "record_id", "payload_json", "first_seen_at", "updated_at", "deleted_at", "last_batch_id"],
@@ -147,7 +147,7 @@ _ALIAS_TO_TYPE = {
     "workout": "workouts",
 }
 
-HEALTH_SUMMARY_SECTIONS = ("sleep", "vitals", "activity", "screen_time")
+HEALTH_SUMMARY_SECTIONS = ("sleep", "vitals", "activity", "cycle", "screen_time")
 
 SLEEP_STAGE_NAMES = {
     "0": "unknown",
@@ -800,7 +800,8 @@ async def _activity_health_summary(target: date) -> tuple[dict[str, object], int
         "SELECT metric_type, unit, COUNT(*) AS record_count, "
         "SUM(numeric_value) AS total, MIN(numeric_value) AS minimum, "
         "MAX(numeric_value) AS maximum, AVG(numeric_value) AS average "
-        f"FROM metric_intervals WHERE {date_clause} AND metric_type != 'screen_time' "
+        f"FROM metric_intervals WHERE {date_clause} "
+        "AND metric_type NOT IN ('screen_time', 'menstruation_period') "
         "GROUP BY metric_type, unit ORDER BY metric_type ASC"
     )
     metrics: list[dict[str, object]] = []
@@ -839,6 +840,27 @@ async def _activity_health_summary(target: date) -> tuple[dict[str, object], int
         })
     total_rows += len(workouts)
     return {"metrics": metrics, "workouts": workouts}, total_rows
+
+
+async def _cycle_health_summary(target: date) -> tuple[dict[str, object], int]:
+    target_sql = _sql_quote(target.isoformat())
+    result = await _post_query(
+        "SELECT start_time, end_time, numeric_value AS duration_days, unit "
+        "FROM metric_intervals WHERE metric_type = 'menstruation_period' "
+        f"AND {_local_date_expression('start_time')} <= date({target_sql}) "
+        f"AND {_local_date_expression('COALESCE(end_time, start_time)')} >= date({target_sql}) "
+        f"ORDER BY start_time DESC LIMIT {MAX_TOOL_ROWS}"
+    )
+    periods = [
+        {
+            "start": row.get("start_time"),
+            "end": row.get("end_time"),
+            "duration_days": row.get("duration_days"),
+        }
+        for row in result.get("rows", [])
+        if isinstance(row, dict)
+    ]
+    return {"active": bool(periods), "periods": periods}, len(periods)
 
 
 async def _screen_time_health_summary(target: date) -> tuple[dict[str, object], int]:
@@ -883,8 +905,8 @@ async def get_health_summary(
 
     ``target_date`` is the Asia/Shanghai calendar date; sleep is assigned to
     the date on which the main session ended. ``sections`` can limit the call
-    to sleep, vitals, activity, and/or screen_time. Omitting it returns all
-    four sections. Sleep stage codes and exercise codes are translated to
+    to sleep, vitals, activity, cycle, and/or screen_time. Omitting it returns all
+    five sections. Sleep stage codes and exercise codes are translated to
     stable names, and stage durations and percentages are calculated here so
     callers never need to join low-level records themselves.
     """
@@ -916,6 +938,10 @@ async def get_health_summary(
         response["activity"], count = await _activity_health_summary(target)
         total_rows += count
         data_types.extend(["metric_intervals", "workouts"])
+    if "cycle" in requested:
+        response["cycle"], count = await _cycle_health_summary(target)
+        total_rows += count
+        data_types.append("metric_intervals")
     if "screen_time" in requested:
         response["screen_time"], count = await _screen_time_health_summary(target)
         total_rows += count

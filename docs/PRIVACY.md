@@ -2,7 +2,7 @@
 
 ReadMe handles sensitive health information. Treat the server and backups as private infrastructure.
 
-- Health Connect access is read-only and category-specific.
+- Health Connect access is read-only and category-specific. Each category is evaluated independently; denying one category does not block the others, and ungranted categories are neither read nor uploaded.
 - Usage Access is optional. Camera access is used for enrollment QR scanning.
 - Use HTTPS and keep the application port behind a reverse proxy.
 - Give every reader a separate credential and revoke it when no longer needed.

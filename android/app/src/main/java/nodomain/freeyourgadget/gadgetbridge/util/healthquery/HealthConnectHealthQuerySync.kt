@@ -6,8 +6,11 @@ package nodomain.freeyourgadget.gadgetbridge.util.healthquery
 
 import android.content.Context
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import kotlinx.coroutines.runBlocking
@@ -30,12 +33,18 @@ object HealthConnectHealthQuerySync {
     private const val LOOK_BACK_SECONDS = 24L * 60L * 60L
     private val LOG = LoggerFactory.getLogger(HealthConnectHealthQuerySync::class.java)
 
-    private val readPermissions = setOf(
+    internal val uploadReadPermissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+        HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
     )
+
+    internal fun hasUsablePermission(granted: Set<String>): Boolean =
+        granted.any { it in uploadReadPermissions }
 
     sealed class Outcome {
         data class Success(val uploadedDays: Int) : Outcome()
@@ -51,7 +60,7 @@ object HealthConnectHealthQuerySync {
         } catch (_: Exception) {
             return@runBlocking Outcome.Failure(true, "permission_check_error")
         }
-        if (!granted.containsAll(readPermissions)) return@runBlocking Outcome.PermissionRequired
+        if (!hasUsablePermission(granted)) return@runBlocking Outcome.PermissionRequired
 
         val prefs = GBApplication.getPrefs().preferences
         val now = Instant.now()
@@ -62,7 +71,7 @@ object HealthConnectHealthQuerySync {
         } else earliest
 
         val healthDays = try {
-            HealthConnectReadPayload.build(client, from, now, ZoneId.systemDefault())
+            HealthConnectReadPayload.build(client, from, now, ZoneId.systemDefault(), granted)
         } catch (e: SecurityException) {
             return@runBlocking Outcome.PermissionRequired
         } catch (e: Exception) {

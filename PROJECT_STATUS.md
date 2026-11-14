@@ -2,6 +2,13 @@
 
 Updated: 2026-11-14
 
+## 2026-11-14 · v1.0.2 independent category permissions
+
+- Android now evaluates supported Health Connect permissions independently. Any one authorized category can sync; an ungranted category is skipped without blocking the rest.
+- The public phone-to-server path now includes blood oxygen, active calories, and optional menstrual-period records. The normalized MCP summary exposes menstrual periods in an optional cycle section, and reader audit renders that section without embedding private reader names.
+- The bilingual README, setup guide, and privacy guide now describe the actual per-category behavior. Public backend regression passes 91/91; targeted Android tests and assembleMainlineDebug pass.
+- Source version is 1.0.2 (3). The historical v1.0.1 tag and APK remain unchanged.
+
 Architecture trade-offs and unselected routes now live in dedicated bilingual documents:
 `docs/ARCHITECTURE.zh-CN.md` and `docs/ARCHITECTURE.md`. The root READMEs and setup guides link to them, while the
 setup guides remain focused on installation and troubleshooting. The new documents compare Huawei Health

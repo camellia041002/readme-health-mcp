@@ -26,6 +26,7 @@ INTERVAL_SPECS: dict[str, tuple[str, str, str]] = {
     "TotalCaloriesBurnedRecord": ("total_calories", "energy", "kcal"),
     "HydrationRecord": ("hydration", "volume", "L"),
     "ReadMeScreenTimeRecord": ("screen_time", "durationMinutes", "min"),
+    "MenstruationPeriodRecord": ("menstruation_period", "durationDays", "day"),
 }
 
 

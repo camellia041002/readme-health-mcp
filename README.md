@@ -4,7 +4,7 @@
 
 ReadMe 是一套自托管、只读的健康数据桥，让支持 MCP 的 Chat 端和 Agent 端能够查询 Android Health Connect 中已有的数据。
 
-当前 Android 安装包可从 [v1.0.1 发布页](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.1)下载。
+当前 Android 安装包可从 [v1.0.2 发布页](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.2)下载。
 
 ```text
 手环或手表 → 官方健康 App → Health Sync → Health Connect
@@ -31,17 +31,18 @@ Android App 同时提供本地健康看板，也可以选择读取各应用的�
 - 心率
 - 血氧饱和度
 - 生理周期记录（前提是上游写入 Health Connect）
-- 步数和活动汇总
+- 步数、活动热量和活动汇总
 - Health Connect 提供的运动记录
 - 可选的 Android 应用前台使用时长
 
 实际能读到哪些数据，取决于设备的官方健康 App 或 Health Sync 向 Health Connect 写入了什么。当前完整验证的组合是华为手环 10、华为运动健康和 Health Sync。其他设备只要能写入兼容的 Health Connect 记录，原则上也可以沿用后面的 ReadMe、服务器和 MCP。
 
-日常查询可以通过一个 MCP 工具一次返回完整的规范化汇总，不需要小机自己拼接多个底层接口。汇总会包含已有的睡眠阶段时长和比例、心率与血氧等指标、活动、运动记录和可选的屏幕使用时间，并把 Android 的数字睡眠阶段和运动类型转换成人能读懂的名称。
+日常查询可以通过一个 MCP 工具一次返回完整的规范化汇总，不需要小机自己拼接多个底层接口。汇总会包含已有的睡眠阶段时长和比例、心率与血氧等指标、活动、运动记录、可选的生理周期和屏幕使用时间，并把 Android 的数字睡眠阶段和运动类型转换成人能读懂的名称。
 
 ## 隐私边界
 
 - 健康数据只读，项目不会修改 Health Connect 中的记录。
+- 各类健康权限互相独立。只授权睡眠，就只读取和上传睡眠；拒绝血氧或生理周期，不会阻止步数、心率等已授权类别同步。
 - 服务端由使用者自行部署，每个 MCP 凭据都可以单独撤销。
 - 「谁看过」会记录凭据名称、查询时间、查询类别与时间范围，以及经过限制的返回摘要。
 - 读取者名称由服务器所有者自行配置，项目没有内置私人助理名称。
@@ -68,7 +69,7 @@ Android App 同时提供本地健康看板，也可以选择读取各应用的�
 1. 使用 `server/docker-compose.example.yml` 和自己的 HTTPS 域名部署服务端。
 2. 从 Releases 安装 APK，或者自行构建 `android/`。
 3. 在服务端看板生成设备接入二维码，然后使用 ReadMe 扫描。
-4. 只授权你愿意共享的 Health Connect 数据类型。
+4. 只授权你愿意共享的 Health Connect 数据类型；至少授权一类即可使用，未授权类别不会被读取或上传。
 5. 为每一只小机创建独立、只读的 MCP 凭据。
 
 将服务端暴露到互联网前，请先阅读[完整安装说明](docs/SETUP.zh-CN.md)。

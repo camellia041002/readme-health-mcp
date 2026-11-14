@@ -333,6 +333,19 @@ class ReaderAccessActivity : AppCompatActivity() {
             }
         }
 
+        val cycle = summary.optJSONObject("cycle")
+        val periods = cycle?.optJSONArray("periods")
+        if (cycle != null && periods != null && periods.length() > 0 && sections.add("生理周期")) {
+            rows.add(DetailRow("生理周期", section = true))
+            for (i in 0 until periods.length()) {
+                val period = periods.optJSONObject(i) ?: continue
+                rows.add(DetailRow(
+                    "经期",
+                    "${formatDate(period.optString("start"))}–${formatDate(period.optString("end"))}"
+                ))
+            }
+        }
+
         val screen = summary.optJSONObject("screen_time")
         val apps = screen?.optJSONArray("apps")
         if (screen != null && apps != null && sections.add("屏幕使用")) {
@@ -388,6 +401,19 @@ class ReaderAccessActivity : AppCompatActivity() {
     }
 
     private fun eventCategories(event: JSONObject): List<String> = buildList {
+        val summary = event.optJSONObject("result_summary")
+        if (summary?.optString("kind") == "health_summary") {
+            if (summary.has("sleep")) add("睡眠")
+            val vitalMetrics = summary.optJSONObject("vitals")?.optJSONArray("metrics")
+            if (vitalMetrics != null) for (i in 0 until vitalMetrics.length()) {
+                val metric = vitalMetrics.optJSONObject(i) ?: continue
+                add(healthMetricLabel(metric.optString("metric")))
+            }
+            if (summary.has("activity")) add("活动")
+            if (summary.optJSONObject("cycle")?.optJSONArray("periods")?.length()?.let { it > 0 } == true) add("生理周期")
+            if (summary.has("screen_time")) add("屏幕使用")
+            return@buildList
+        }
         val dataTypes = event.optJSONArray("data_types")
         if (dataTypes != null) for (i in 0 until dataTypes.length()) {
             val type = dataTypes.optString(i)
@@ -598,6 +624,12 @@ class ReaderAccessActivity : AppCompatActivity() {
         java.time.OffsetDateTime.parse(raw)
             .atZoneSameInstant(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("HH:mm"))
+    }.getOrDefault(raw)
+
+    private fun formatDate(raw: String): String = runCatching {
+        java.time.OffsetDateTime.parse(raw)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("M月d日"))
     }.getOrDefault(raw)
 
     private fun formatSleepRange(start: String, end: String): String {

@@ -16,6 +16,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.runBlocking
 import nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectClientProvider
+import org.json.JSONObject
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -45,27 +46,24 @@ data class HealthConnectDashboardSnapshot(
         fun load(context: Context): HealthConnectDashboardSnapshot = runBlocking {
             val client = HealthConnectClientProvider.healthConnectInit(context)
                 ?: return@runBlocking unavailable()
-            val required = setOf(
-                HealthPermission.getReadPermission(StepsRecord::class),
-                HealthPermission.getReadPermission(HeartRateRecord::class),
-                HealthPermission.getReadPermission(SleepSessionRecord::class),
-                HealthPermission.getReadPermission(ExerciseSessionRecord::class)
-            )
             val granted = runCatching { client.permissionController.getGrantedPermissions() }
                 .getOrElse { return@runBlocking unavailable() }
-            if (!granted.containsAll(required)) return@runBlocking unavailable()
+            if (!HealthConnectHealthQuerySync.hasUsablePermission(granted)) return@runBlocking unavailable()
 
             val zone = ZoneId.systemDefault()
             val now = Instant.now()
             val start = now.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
-            val day = runCatching { HealthConnectReadPayload.build(client, start, now, zone).lastOrNull() }
-                .getOrNull() ?: return@runBlocking HealthConnectDashboardSnapshot(true, 0, 0, "", 0, 0, 0.0, "", "")
-            val body = day.body
+            val day = runCatching { HealthConnectReadPayload.build(client, start, now, zone, granted).lastOrNull() }
+                .getOrNull()
+            val body = day?.body ?: JSONObject().put("date", now.atZone(zone).toLocalDate().toString())
             // Steps are a true "today" value, but heart rate and sleep cards should
             // show the latest available measurement/session. An upload just after
             // midnight must not turn yesterday's freshly synced health data into
             // the misleading state "not synced".
-            val latestHeartSample = runCatching {
+            val heartPermission = HealthPermission.getReadPermission(HeartRateRecord::class)
+            val sleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
+            val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
+            val latestHeartSample = if (heartPermission in granted) runCatching {
                 client.readRecords(
                     ReadRecordsRequest(
                         HeartRateRecord::class,
@@ -73,7 +71,7 @@ data class HealthConnectDashboardSnapshot(
                         pageSize = 1000
                     )
                 ).records.flatMap { it.samples }.maxByOrNull { it.time }
-            }.getOrNull()
+            }.getOrNull() else null
             val heartTime = latestHeartSample?.time?.atZone(zone)?.toOffsetDateTime()?.toString().orEmpty()
             val displayTime = runCatching {
                 OffsetDateTime.parse(heartTime).toLocalTime().withSecond(0).withNano(0).toString()
@@ -81,7 +79,7 @@ data class HealthConnectDashboardSnapshot(
             val displayDateTime = runCatching {
                 OffsetDateTime.parse(heartTime).atZoneSameInstant(zone).format(DATE_TIME_FORMAT)
             }.getOrDefault("")
-            val latestSleep = runCatching {
+            val latestSleep = if (sleepPermission in granted) runCatching {
                 client.readRecords(
                     ReadRecordsRequest(
                         SleepSessionRecord::class,
@@ -89,12 +87,12 @@ data class HealthConnectDashboardSnapshot(
                         pageSize = 1000
                     )
                 ).records.maxByOrNull { it.endTime }
-            }.getOrNull()
+            }.getOrNull() else null
             val sleepSeconds = latestSleep?.let { java.time.Duration.between(it.startTime, it.endTime).seconds } ?: 0L
             val sleepStart = latestSleep?.startTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
             val sleepEnd = latestSleep?.endTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
             val sleepDate = latestSleep?.endTime?.atZone(zone)?.format(DATE_FORMAT).orEmpty()
-            val latestSteps = runCatching {
+            val latestSteps = if (stepsPermission in granted) runCatching {
                 client.readRecords(
                     ReadRecordsRequest(
                         StepsRecord::class,
@@ -102,7 +100,7 @@ data class HealthConnectDashboardSnapshot(
                         pageSize = 1000
                     )
                 ).records.maxByOrNull { it.endTime }
-            }.getOrNull()
+            }.getOrNull() else null
             val oxygenPermission = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
             val periodPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
             val oxygen = if (oxygenPermission in granted) runCatching {

@@ -29,7 +29,7 @@ Terminate TLS with Caddy, nginx, or Traefik and proxy to the loopback-only port 
 
 ## 3. Connect ReadMe
 
-Build or install the APK. Open the server dashboard, create a device enrollment, and scan its QR code in ReadMe. Grant only the Health Connect categories you want to share. Use **Sync now** once, then select a background interval.
+Build or install the APK. Open the server dashboard, create a device enrollment, and scan its QR code in ReadMe. Grant only the Health Connect categories you want to share. One category is enough; denied categories are neither read nor uploaded and do not block other authorized categories. Use **Sync now** once, then select a background interval.
 
 Android may postpone periodic work when battery saving is aggressive. Allow background activity for ReadMe, Health Sync, and the wearable app if timely updates matter.
 

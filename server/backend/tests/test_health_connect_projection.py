@@ -202,3 +202,36 @@ async def test_projects_readme_screen_time_with_app_identity():
     finally:
         await conn.close()
 
+
+@pytest.mark.asyncio
+async def test_projects_menstruation_period_as_optional_cycle_interval():
+    await init_db()
+    conn = await get_connection()
+    try:
+        await _seed_projection_batch(conn, "projection:period-test")
+        await conn.commit()
+        await project_upsert(
+            conn,
+            device_id="dev-test",
+            record_type="MenstruationPeriodRecord",
+            record_id="period-2026-11-05",
+            payload={
+                "startTime": "2026-11-05T00:00:00+08:00",
+                "endTime": "2026-11-08T00:00:00+08:00",
+                "durationDays": 3,
+            },
+            batch_id="projection:period-test",
+        )
+        await conn.commit()
+        async with conn.execute(
+            "SELECT metric_type, start_time, end_time, numeric_value, unit "
+            "FROM metric_intervals WHERE metric_type = 'menstruation_period'"
+        ) as cursor:
+            row = await cursor.fetchone()
+        assert row["start_time"] == "2026-11-05T00:00:00+08:00"
+        assert row["end_time"] == "2026-11-08T00:00:00+08:00"
+        assert row["numeric_value"] == 3
+        assert row["unit"] == "day"
+    finally:
+        await conn.close()
+

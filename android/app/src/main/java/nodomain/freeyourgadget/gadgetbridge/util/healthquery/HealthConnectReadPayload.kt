@@ -6,8 +6,12 @@ package nodomain.freeyourgadget.gadgetbridge.util.healthquery
 
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.aggregate.AggregateMetric
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateRequest
@@ -36,70 +40,114 @@ object HealthConnectReadPayload {
         client: HealthConnectClient,
         from: Instant,
         to: Instant,
-        zone: ZoneId
+        zone: ZoneId,
+        grantedPermissions: Set<String>
     ): List<SelfHostedHealthDay> {
         require(!from.isAfter(to))
         require(from >= to.minusSeconds(MAX_DAYS * 24L * 60L * 60L))
 
         val bodies = linkedMapOf<LocalDate, JSONObject>()
-        var date = from.atZone(zone).toLocalDate()
-        val lastDate = to.atZone(zone).toLocalDate()
-        while (!date.isAfter(lastDate)) {
-            val start = maxOf(from, date.atStartOfDay(zone).toInstant())
-            val end = minOf(to, date.plusDays(1).atStartOfDay(zone).toInstant())
-            if (start.isBefore(end)) {
-                val count = client.aggregate(
-                    AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(start, end))
-                )[StepsRecord.COUNT_TOTAL]
-                if (count != null) body(bodies, date).put("steps", JSONObject().put("total", count))
-            }
-            date = date.plusDays(1)
-        }
-
-        val heartPoints = linkedMapOf<Instant, Long>()
-        readAll(client, HeartRateRecord::class.java.kotlin, from, to).forEach { record ->
-            record.samples.forEach { sample ->
-                if (sample.beatsPerMinute in 1..300) heartPoints.putIfAbsent(sample.time, sample.beatsPerMinute)
+        if (canRead<StepsRecord>(grantedPermissions)) {
+            var date = from.atZone(zone).toLocalDate()
+            val lastDate = to.atZone(zone).toLocalDate()
+            while (!date.isAfter(lastDate)) {
+                val start = maxOf(from, date.atStartOfDay(zone).toInstant())
+                val end = minOf(to, date.plusDays(1).atStartOfDay(zone).toInstant())
+                if (start.isBefore(end)) {
+                    val count = client.aggregate(
+                        AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(start, end))
+                    )[StepsRecord.COUNT_TOTAL]
+                    if (count != null) body(bodies, date).put("steps", JSONObject().put("total", count))
+                }
+                date = date.plusDays(1)
             }
         }
-        heartPoints.entries.sortedBy { it.key }.forEach { (time, bpm) ->
-            val array = body(bodies, time.atZone(zone).toLocalDate()).optJSONArray("heart_rate")
-                ?: JSONArray().also { body(bodies, time.atZone(zone).toLocalDate()).put("heart_rate", it) }
-            array.put(JSONObject().put("timestamp", format(time, zone)).put("value", bpm))
-        }
 
-        dedupeSleep(readAll(client, SleepSessionRecord::class.java.kotlin, from, to)).forEach { session ->
-            val stages = JSONArray()
-            session.stages.sortedBy { it.startTime }.forEach { stage ->
-                stages.put(JSONObject()
-                    .put("stage", stageName(stage.stage))
-                    .put("start_time", format(stage.startTime, zone))
-                    .put("end_time", format(stage.endTime, zone)))
+        if (canRead<HeartRateRecord>(grantedPermissions)) {
+            val heartPoints = linkedMapOf<Instant, Long>()
+            readAll(client, HeartRateRecord::class.java.kotlin, from, to).forEach { record ->
+                record.samples.forEach { sample ->
+                    if (sample.beatsPerMinute in 1..300) heartPoints.putIfAbsent(sample.time, sample.beatsPerMinute)
+                }
             }
-            val item = JSONObject()
-                .put("session_start_time", format(session.startTime, zone))
-                .put("session_end_time", format(session.endTime, zone))
-                .put("duration_seconds", session.endTime.epochSecond - session.startTime.epochSecond)
-                .put("stages", stages)
-            val day = session.endTime.atZone(zone).toLocalDate()
-            val array = body(bodies, day).optJSONArray("sleep")
-                ?: JSONArray().also { body(bodies, day).put("sleep", it) }
-            array.put(item)
+            heartPoints.entries.sortedBy { it.key }.forEach { (time, bpm) ->
+                val array = body(bodies, time.atZone(zone).toLocalDate()).optJSONArray("heart_rate")
+                    ?: JSONArray().also { body(bodies, time.atZone(zone).toLocalDate()).put("heart_rate", it) }
+                array.put(JSONObject().put("timestamp", format(time, zone)).put("value", bpm))
+            }
         }
 
-        readAll(client, ExerciseSessionRecord::class.java.kotlin, from, to)
-            .distinctBy { "${it.startTime}:${it.endTime}:${it.exerciseType}" }
-            .sortedBy { it.startTime }
-            .forEach { workout ->
-                val day = workout.endTime.atZone(zone).toLocalDate()
-                val array = body(bodies, day).optJSONArray("workouts")
-                    ?: JSONArray().also { body(bodies, day).put("workouts", it) }
+        if (canRead<SleepSessionRecord>(grantedPermissions)) {
+            dedupeSleep(readAll(client, SleepSessionRecord::class.java.kotlin, from, to)).forEach { session ->
+                val stages = JSONArray()
+                session.stages.sortedBy { it.startTime }.forEach { stage ->
+                    stages.put(JSONObject()
+                        .put("stage", stageName(stage.stage))
+                        .put("start_time", format(stage.startTime, zone))
+                        .put("end_time", format(stage.endTime, zone)))
+                }
+                val item = JSONObject()
+                    .put("session_start_time", format(session.startTime, zone))
+                    .put("session_end_time", format(session.endTime, zone))
+                    .put("duration_seconds", session.endTime.epochSecond - session.startTime.epochSecond)
+                    .put("stages", stages)
+                val day = session.endTime.atZone(zone).toLocalDate()
+                val array = body(bodies, day).optJSONArray("sleep")
+                    ?: JSONArray().also { body(bodies, day).put("sleep", it) }
+                array.put(item)
+            }
+        }
+
+        if (canRead<ExerciseSessionRecord>(grantedPermissions)) {
+            readAll(client, ExerciseSessionRecord::class.java.kotlin, from, to)
+                .distinctBy { "${it.startTime}:${it.endTime}:${it.exerciseType}" }
+                .sortedBy { it.startTime }
+                .forEach { workout ->
+                    val day = workout.endTime.atZone(zone).toLocalDate()
+                    val array = body(bodies, day).optJSONArray("workouts")
+                        ?: JSONArray().also { body(bodies, day).put("workouts", it) }
+                    array.put(JSONObject()
+                        .put("id", "hc:${workout.startTime}:${workout.endTime}:${workout.exerciseType}")
+                        .put("start_time", format(workout.startTime, zone))
+                        .put("end_time", format(workout.endTime, zone))
+                        .put("raw_type", workout.exerciseType))
+                }
+        }
+
+        if (canRead<ActiveCaloriesBurnedRecord>(grantedPermissions)) {
+            readAll(client, ActiveCaloriesBurnedRecord::class.java.kotlin, from, to).forEach { record ->
+                val day = record.endTime.atZone(zone).toLocalDate()
+                val array = body(bodies, day).optJSONArray("active_calories")
+                    ?: JSONArray().also { body(bodies, day).put("active_calories", it) }
                 array.put(JSONObject()
-                    .put("id", "hc:${workout.startTime}:${workout.endTime}:${workout.exerciseType}")
-                    .put("start_time", format(workout.startTime, zone))
-                    .put("end_time", format(workout.endTime, zone))
-                    .put("raw_type", workout.exerciseType))
+                    .put("start_time", format(record.startTime, zone))
+                    .put("end_time", format(record.endTime, zone))
+                    .put("calories", record.energy.inKilocalories))
             }
+        }
+
+        if (canRead<OxygenSaturationRecord>(grantedPermissions)) {
+            readAll(client, OxygenSaturationRecord::class.java.kotlin, from, to).forEach { record ->
+                val day = record.time.atZone(zone).toLocalDate()
+                val array = body(bodies, day).optJSONArray("oxygen_saturation")
+                    ?: JSONArray().also { body(bodies, day).put("oxygen_saturation", it) }
+                array.put(JSONObject()
+                    .put("time", format(record.time, zone))
+                    .put("percentage", record.percentage.value))
+            }
+        }
+
+        if (canRead<MenstruationPeriodRecord>(grantedPermissions)) {
+            readAll(client, MenstruationPeriodRecord::class.java.kotlin, from, to).forEach { record ->
+                val day = record.startTime.atZone(zone).toLocalDate()
+                val array = body(bodies, day).optJSONArray("menstruation_periods")
+                    ?: JSONArray().also { body(bodies, day).put("menstruation_periods", it) }
+                array.put(JSONObject()
+                    .put("start_time", format(record.startTime, zone))
+                    .put("end_time", format(record.endTime, zone))
+                    .put("duration_days", java.time.Duration.between(record.startTime, record.endTime).toDays().coerceAtLeast(1)))
+            }
+        }
 
         return bodies.entries.filter { it.value.length() > 1 }
             .map { SelfHostedHealthDay(it.key.toString(), it.value) }
@@ -144,6 +192,10 @@ object HealthConnectReadPayload {
 
     private fun body(map: MutableMap<LocalDate, JSONObject>, date: LocalDate): JSONObject =
         map.getOrPut(date) { JSONObject().put("date", date.toString()) }
+
+    private inline fun <reified T : androidx.health.connect.client.records.Record> canRead(
+        grantedPermissions: Set<String>
+    ): Boolean = HealthPermission.getReadPermission(T::class) in grantedPermissions
 
     private fun format(time: Instant, zone: ZoneId): String =
         DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(time.atZone(zone))

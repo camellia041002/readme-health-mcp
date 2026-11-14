@@ -5,6 +5,7 @@ import os
 import sqlite3
 import sys
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -192,6 +193,33 @@ def test_health_summary_normalizes_android_sleep_and_exercise_codes():
     assert mcp_server._normalize_exercise_type(79) == "walking"
     assert mcp_server._normalize_exercise_type("56") == "running"
     assert mcp_server._normalize_exercise_type("yoga") == "yoga"
+
+
+@pytest.mark.asyncio
+async def test_cycle_health_summary_returns_only_active_periods(monkeypatch):
+    async def fake_post_query(sql: str):
+        assert "metric_type = 'menstruation_period'" in sql
+        assert "COALESCE(end_time, start_time)" in sql
+        return {
+            "rows": [{
+                "start_time": "2026-11-05T00:00:00+08:00",
+                "end_time": "2026-11-08T00:00:00+08:00",
+                "duration_days": 3,
+                "unit": "day",
+            }]
+        }
+
+    monkeypatch.setattr(mcp_server, "_post_query", fake_post_query)
+    summary, count = await mcp_server._cycle_health_summary(date(2026, 11, 6))
+    assert count == 1
+    assert summary == {
+        "active": True,
+        "periods": [{
+            "start": "2026-11-05T00:00:00+08:00",
+            "end": "2026-11-08T00:00:00+08:00",
+            "duration_days": 3,
+        }],
+    }
 
 
 @pytest.mark.asyncio

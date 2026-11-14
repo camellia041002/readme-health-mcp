@@ -1,6 +1,9 @@
 package nodomain.freeyourgadget.gadgetbridge.util.selfhostedhealth
 
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthQueryPairingParser
+import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthConnectHealthQuerySync
 import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthQueryPayloadMapper
 import org.json.JSONArray
 import org.json.JSONObject
@@ -29,6 +32,8 @@ class HealthQueryProtocolTest {
             .put("steps", JSONObject().put("total", 4321))
             .put("heart_rate", JSONArray().put(JSONObject()
                 .put("timestamp", "2026-11-05T08:00:00+08:00").put("value", 72)))
+            .put("oxygen_saturation", JSONArray().put(JSONObject()
+                .put("time", "2026-11-05T08:05:00+08:00").put("percentage", 98.0)))
             .put("sleep", JSONArray().put(JSONObject()
                 .put("session_start_time", "2026-11-04T23:00:00+08:00")
                 .put("session_end_time", "2026-11-05T07:00:00+08:00")
@@ -38,6 +43,12 @@ class HealthQueryProtocolTest {
             .put("workouts", JSONArray().put(JSONObject().put("id", "gbw1:1")
                 .put("raw_type", 7).put("start_time", "2026-11-05T18:00:00+08:00")
                 .put("end_time", "2026-11-05T18:30:00+08:00")))
+            .put("active_calories", JSONArray().put(JSONObject()
+                .put("start_time", "2026-11-05T18:00:00+08:00")
+                .put("end_time", "2026-11-05T18:30:00+08:00").put("calories", 120.5)))
+            .put("menstruation_periods", JSONArray().put(JSONObject()
+                .put("start_time", "2026-11-05T00:00:00+08:00")
+                .put("end_time", "2026-11-08T00:00:00+08:00").put("duration_days", 3)))
             .put("screen_time", JSONArray().put(JSONObject()
                 .put("package", "com.example.reader").put("label", "示例")
                 .put("duration_minutes", 42.5)
@@ -49,9 +60,13 @@ class HealthQueryProtocolTest {
 
         assertEquals(first.toString(), second.toString())
         assertEquals(1, first.getInt("protocol_version"))
-        assertEquals(5, first.getJSONArray("records").length())
+        assertEquals(8, first.getJSONArray("records").length())
         assertEquals(
-            setOf("StepsRecord", "HeartRateRecord", "SleepSessionRecord", "ExerciseSessionRecord", "ReadMeScreenTimeRecord"),
+            setOf(
+                "StepsRecord", "HeartRateRecord", "OxygenSaturationRecord", "SleepSessionRecord",
+                "ExerciseSessionRecord", "ActiveCaloriesBurnedRecord", "MenstruationPeriodRecord",
+                "ReadMeScreenTimeRecord"
+            ),
             (0 until first.getJSONArray("records").length()).map {
                 first.getJSONArray("records").getJSONObject(it).getString("record_type")
             }.toSet()
@@ -62,6 +77,15 @@ class HealthQueryProtocolTest {
             .first { it.getString("record_type") == "ReadMeScreenTimeRecord" }
         assertEquals(42.5, screen.getJSONObject("payload").getDouble("durationMinutes"), 0.01)
         assertEquals("示例", screen.getJSONObject("payload").getString("appLabel"))
+    }
+
+    @Test
+    fun anySupportedHealthPermissionCanRunIndependently() {
+        assertFalse(HealthConnectHealthQuerySync.hasUsablePermission(emptySet()))
+        assertFalse(HealthConnectHealthQuerySync.hasUsablePermission(setOf("unrelated.permission")))
+        assertTrue(HealthConnectHealthQuerySync.hasUsablePermission(setOf(
+            HealthPermission.getReadPermission(OxygenSaturationRecord::class)
+        )))
     }
 
     @Test

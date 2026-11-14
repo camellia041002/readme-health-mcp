@@ -4,7 +4,7 @@
 
 ReadMe is a self-hosted, read-only bridge that lets MCP-compatible assistants query health data already stored in Android Health Connect.
 
-Download the current Android APK from the [v1.0.1 release](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.1).
+Download the current Android APK from the [v1.0.2 release](https://github.com/camellia041002/readme-health-mcp/releases/tag/v1.0.2).
 
 ```text
 wearable -> vendor health app -> Health Sync -> Health Connect
@@ -29,17 +29,18 @@ The Android app also provides a local dashboard and an optional screen-time sour
 - heart rate
 - blood oxygen
 - menstrual period records, when the source writes them to Health Connect
-- steps and activity summaries
+- steps, active calories, and activity summaries
 - exercise records exposed by Health Connect
 - optional Android app foreground-usage totals
 
 Data availability depends on what the wearable's companion app or Health Sync writes into Health Connect. The reference setup is Huawei Band 10 with Huawei Health and Health Sync; other devices can work when they populate compatible Health Connect records.
 
-For ordinary daily questions, MCP clients can request one normalized summary instead of joining several low-level records. The summary includes available sleep-stage durations and percentages, vitals, activity, workouts, and optional screen time; Android numeric sleep and exercise codes are translated into stable names.
+For ordinary daily questions, MCP clients can request one normalized summary instead of joining several low-level records. The summary includes available sleep-stage durations and percentages, vitals, activity, workouts, optional menstrual periods, and optional screen time; Android numeric sleep and exercise codes are translated into stable names.
 
 ## Privacy model
 
 - Health data is read only. The project does not edit Health Connect records.
+- Health categories are independent. Granting only sleep uploads only sleep; denying oxygen or menstrual access does not block already authorized steps, heart rate, or other categories.
 - The server is self-hosted and MCP credentials are independently revocable.
 - Reader audit records the named credential, query time, requested categories/range, and a bounded result summary.
 - Reader names are configured by the server owner; no private assistant name is built in.
@@ -66,7 +67,7 @@ private reader names, databases, screenshots and deployment logs are not copied 
 1. Deploy the server using `server/docker-compose.example.yml` and an HTTPS domain.
 2. Install the APK from this repository's Releases page, or build `android/` yourself.
 3. In the server dashboard, generate a device enrollment QR and scan it in ReadMe.
-4. Grant only the Health Connect record types you want to share.
+4. Grant only the Health Connect record types you want to share. At least one category is enough; ungranted categories are neither read nor uploaded.
 5. Create a named, read-only MCP credential for each assistant.
 
 See [the full setup guide](docs/SETUP.md) before exposing the server to the internet.
