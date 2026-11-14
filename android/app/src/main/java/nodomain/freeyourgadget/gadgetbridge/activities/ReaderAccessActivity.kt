@@ -200,8 +200,15 @@ class ReaderAccessActivity : AppCompatActivity() {
         }
 
         events.forEach { event ->
-            if (eventCategories(event).isEmpty()) return@forEach
+            val categories = eventCategories(event)
+            if (categories.isEmpty()) return@forEach
             val summary = event.optJSONObject("result_summary") ?: return@forEach
+            if (summary.optInt("count", -1) == 0) {
+                categories.forEach(::section)
+                queryDateRange(event)?.let { rows.add(DetailRow("查询日期", it)) }
+                rows.add(DetailRow("结果", "本次没有返回记录"))
+                return@forEach
+            }
             when (val kind = summary.optString("kind")) {
                 "sleep" -> {
                     val sessions = summary.optJSONArray("sessions")
@@ -242,6 +249,23 @@ class ReaderAccessActivity : AppCompatActivity() {
                     kind == "screen_time" -> addScreenTimeRows(rows, sections, summary)
                 }
                 "screen_time" -> addScreenTimeRows(rows, sections, summary)
+                "menstruation_period" -> {
+                    section("生理周期")
+                    val periods = summary.optJSONArray("periods")
+                    if (periods != null && periods.length() > 0) {
+                        for (i in 0 until periods.length()) {
+                            val period = periods.optJSONObject(i) ?: continue
+                            val start = formatDate(period.optString("start"))
+                            val end = formatDate(period.optString("end"))
+                            val days = period.optDouble("days", Double.NaN)
+                            val duration = if (days.isNaN()) "" else "　${formatNumber(days)}天"
+                            rows.add(DetailRow("经期", "$start–$end$duration"))
+                        }
+                    } else if (summary.has("minimum")) {
+                        rows.add(DetailRow("持续时间", "${formatNumber(summary.optDouble("minimum"))}–${formatNumber(summary.optDouble("maximum"))}天"))
+                        rows.add(DetailRow("记录", "${summary.optInt("count")}条"))
+                    }
+                }
                 "oxygen_saturation" -> {
                     section("血氧")
                     if (summary.has("minimum")) rows.add(DetailRow("范围", "${formatNumber(summary.optDouble("minimum"))}–${formatNumber(summary.optDouble("maximum"))}%"))
@@ -418,11 +442,26 @@ class ReaderAccessActivity : AppCompatActivity() {
         if (dataTypes != null) for (i in 0 until dataTypes.length()) {
             val type = dataTypes.optString(i)
             if (type == "device_sync_batches") continue
-            val metric = event.optJSONObject("result_summary")?.optString("kind").orEmpty()
+            val metric = summary?.optString("kind").orEmpty()
             if (type == "daily_summaries") addAll(dailyCategories(event.optJSONObject("result_summary")))
-            else add(if (type == "metric_intervals" && metric == "screen_time") "屏幕使用" else label(type))
+            else if (type in setOf("metric_points", "metric_intervals") && metric.isNotBlank() && metric != type) {
+                add(healthMetricLabel(metric))
+            } else add(label(type))
         }
     }
+
+    private fun queryDateRange(event: JSONObject): String? {
+        val start = event.optString("start_date").takeIf { it.isNotBlank() && it != "null" }
+        val end = event.optString("end_date").takeIf { it.isNotBlank() && it != "null" }
+        if (start == null && end == null) return null
+        val first = formatQueryDate(start ?: end.orEmpty())
+        val last = formatQueryDate(end ?: start.orEmpty())
+        return if (first == last) first else "$first–$last"
+    }
+
+    private fun formatQueryDate(raw: String): String = runCatching {
+        LocalDate.parse(raw).format(DateTimeFormatter.ofPattern("yyyy年M月d日"))
+    }.getOrDefault(raw)
 
     private fun dailyCategories(summary: JSONObject?): List<String> {
         val values = summary?.optJSONArray("values") ?: return listOf("每日汇总")
@@ -516,6 +555,16 @@ class ReaderAccessActivity : AppCompatActivity() {
             "oxygen_saturation" -> metricLine(summary, "血氧", "%")
             "steps" -> metricLine(summary, "步数", "步")
             "screen_time" -> screenTimeLines(summary)
+            "menstruation_period" -> {
+                val periods = summary.optJSONArray("periods")
+                if (periods == null || periods.length() == 0) metricLine(summary, "生理周期", "天")
+                else buildList {
+                    for (i in 0 until periods.length()) {
+                        val period = periods.optJSONObject(i) ?: continue
+                        add("经期：${formatDate(period.optString("start"))}–${formatDate(period.optString("end"))}")
+                    }
+                }.joinToString("\n")
+            }
             "health_summary" -> buildList {
                 val detailRows = mutableListOf<DetailRow>()
                 addHealthSummaryRows(detailRows, mutableSetOf(), summary)
@@ -598,6 +647,8 @@ class ReaderAccessActivity : AppCompatActivity() {
         "active_calories" -> "活动热量"
         "total_calories" -> "总热量"
         "hydration" -> "饮水"
+        "menstruation_period" -> "生理周期"
+        "screen_time" -> "屏幕使用"
         else -> value
     }
 

@@ -391,6 +391,15 @@ def _bounded_result_summary(
             "count": len(rows),
             "unit": next((row.get("unit") for row in rows if row.get("unit")), None),
         }
+        if effective_kind == "menstruation_period":
+            summary["periods"] = [
+                {
+                    "start": row.get("start_time"),
+                    "end": row.get("end_time"),
+                    "days": row.get("numeric_value"),
+                }
+                for row in rows[:12]
+            ]
         if effective_kind == "screen_time":
             values: list[dict[str, Any]] = []
             for row in rows:

@@ -2,6 +2,12 @@
 
 Updated: 2026-11-14
 
+## 2026-11-14 · v1.0.3 reader-history follow-up
+
+- Zero-row reads now remain expandable and show the absolute query date plus `no records returned`, so an empty sleep, heart-rate, oxygen, steps, or reproductive-health result is not rendered as a dead card.
+- Metric audit labels follow the actual returned metric kind. Menstrual-period reads are no longer mislabeled as steps, and future audit summaries can show the bounded returned period start/end dates.
+- Public backend regression passes 129/129 and `assembleMainlineDebug` passes. This remains source candidate 1.0.3 (4); the existing signed v1.0.2 release and tag are unchanged.
+
 ## 2026-11-14 · v1.0.3 full standard-record candidate
 
 - The dashboard is no longer treated as a sync allowlist. Android permissions, reads, and uploads now share one catalog covering all 41 standard Health Connect 1.1.0 record classes; medical/FHIR resources remain excluded.

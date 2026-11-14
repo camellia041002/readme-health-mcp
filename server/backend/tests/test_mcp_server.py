@@ -175,6 +175,33 @@ def test_reader_audit_summary_keeps_screen_time_apps_and_total():
     ]
 
 
+def test_reader_audit_summary_keeps_exact_menstruation_periods():
+    summary = mcp_server._bounded_result_summary(
+        "metric_intervals",
+        {
+            "rows": [
+                {
+                    "record_key": "secret-period",
+                    "metric_type": "menstruation_period",
+                    "start_time": "2026-10-09T00:00:00+08:00",
+                    "end_time": "2026-10-13T00:00:00+08:00",
+                    "numeric_value": 4,
+                    "unit": "day",
+                }
+            ]
+        },
+        metric_type="menstruation_period",
+    )
+
+    assert summary["kind"] == "menstruation_period"
+    assert summary["periods"] == [{
+        "start": "2026-10-09T00:00:00+08:00",
+        "end": "2026-10-13T00:00:00+08:00",
+        "days": 4,
+    }]
+    assert "record_key" not in str(summary)
+
+
 def test_health_summary_normalizes_android_sleep_and_exercise_codes():
     rows, totals = mcp_server._summarize_sleep_stages([
         {"stage_type": 1, "duration_seconds": 600},
