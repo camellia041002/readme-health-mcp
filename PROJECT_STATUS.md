@@ -2,6 +2,12 @@
 
 Updated: 2026-11-14
 
+## 2026-11-14 · v1.0.3 exact-day dashboard selection
+
+- The Android home dashboard selects the requested local date explicitly. Adding a longer historical lookback, such as menstrual-period records, can no longer make an older payload entry replace today's steps on the card.
+- Day payloads are sorted by date for deterministic enumeration, and a regression test covers today's steps followed by an older cycle entry.
+- The targeted test and `assembleMainlineDebug` pass. This remains source candidate 1.0.3 (4); the existing signed v1.0.2 release and tag are unchanged.
+
 ## 2026-11-14 · v1.0.3 reader-history follow-up
 
 - Zero-row reads now remain expandable and show the absolute query date plus `no records returned`, so an empty sleep, heart-rate, oxygen, steps, or reproductive-health result is not rendered as a dead card.

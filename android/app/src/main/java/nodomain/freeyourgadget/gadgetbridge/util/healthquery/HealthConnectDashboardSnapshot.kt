@@ -16,6 +16,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.runBlocking
 import nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectClientProvider
+import nodomain.freeyourgadget.gadgetbridge.util.selfhostedhealth.SelfHostedHealthDay
 import org.json.JSONObject
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -52,10 +53,13 @@ data class HealthConnectDashboardSnapshot(
 
             val zone = ZoneId.systemDefault()
             val now = Instant.now()
-            val start = now.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
-            val day = runCatching { HealthConnectReadPayload.build(client, start, now, zone, granted).lastOrNull() }
+            val today = now.atZone(zone).toLocalDate()
+            val start = today.atStartOfDay(zone).toInstant()
+            val day = runCatching {
+                selectDay(HealthConnectReadPayload.build(client, start, now, zone, granted), today)
+            }
                 .getOrNull()
-            val body = day?.body ?: JSONObject().put("date", now.atZone(zone).toLocalDate().toString())
+            val body = day?.body ?: JSONObject().put("date", today.toString())
             // Steps are a true "today" value, but heart rate and sleep cards should
             // show the latest available measurement/session. An upload just after
             // midnight must not turn yesterday's freshly synced health data into
@@ -133,6 +137,9 @@ data class HealthConnectDashboardSnapshot(
 
         private val DATE_TIME_FORMAT = java.time.format.DateTimeFormatter.ofPattern("M月d日 HH:mm")
         private val DATE_FORMAT = java.time.format.DateTimeFormatter.ofPattern("M月d日")
+
+        internal fun selectDay(days: List<SelfHostedHealthDay>, date: java.time.LocalDate): SelfHostedHealthDay? =
+            days.firstOrNull { it.date == date.toString() }
 
         private fun formatClock(value: String, zone: ZoneId): String = runCatching {
             OffsetDateTime.parse(value).atZoneSameInstant(zone).toLocalTime().withSecond(0).withNano(0).toString()

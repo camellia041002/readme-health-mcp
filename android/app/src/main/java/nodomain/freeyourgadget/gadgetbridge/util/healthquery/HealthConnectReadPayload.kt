@@ -181,6 +181,7 @@ object HealthConnectReadPayload {
             }
 
         return bodies.entries.filter { it.value.length() > 1 }
+            .sortedBy { it.key }
             .map { SelfHostedHealthDay(it.key.toString(), it.value) }
     }
 
