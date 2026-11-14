@@ -29,6 +29,7 @@ import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.HealthConnectResetDialogFragment
 import nodomain.freeyourgadget.gadgetbridge.util.GB
+import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthConnectRecordCatalog
 import org.slf4j.LoggerFactory
 
 data class PermissionsResultOutcome(
@@ -80,9 +81,7 @@ object HealthConnectPermissionManager {
 
     @JvmStatic
     fun getRequiredHealthConnectPermissions(): Set<String> {
-        return (HealthConnectDataType.entries
-            .flatMap { getRequiredPermissionsForDataType(it) }
-            .toSet() + HealthPermission.getReadPermission(MenstruationPeriodRecord::class))
+        return HealthConnectRecordCatalog.readPermissions
     }
 
     // Helper data class for internal processing

@@ -2,6 +2,13 @@
 
 Updated: 2026-11-14
 
+## 2026-11-14 · v1.0.3 full standard-record candidate
+
+- The dashboard is no longer treated as a sync allowlist. Android permissions, reads, and uploads now share one catalog covering all 41 standard Health Connect 1.1.0 record classes; medical/FHIR resources remain excluded.
+- Curated dashboard metrics keep normalized payloads. Every other granted type is uploaded to the lossless `health_connect_records` collection and remains discoverable and queryable through MCP even when it has no dashboard card.
+- Reproductive-health types use a bounded 90-day lookback; other first reads retain the existing 30-day bound. A denied type is skipped without blocking granted types.
+- Public backend regression passes 128/128, targeted Android tests and `assembleMainlineDebug` pass, `git diff --check` is clean, and the changed-file privacy scan found no new private endpoint, reader name, credential, or health value. Source version 1.0.3 (4) is a candidate; the existing signed v1.0.2 release remains unchanged until real-device permission and sync validation completes.
+
 ## 2026-11-14 · v1.0.2 independent category permissions
 
 - Android now evaluates supported Health Connect permissions independently. Any one authorized category can sync; an ungranted category is skipped without blocking the rest.

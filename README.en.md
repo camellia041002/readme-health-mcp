@@ -31,7 +31,10 @@ The Android app also provides a local dashboard and an optional screen-time sour
 - menstrual period records, when the source writes them to Health Connect
 - steps, active calories, and activity summaries
 - exercise records exposed by Health Connect
+- weight, body composition, blood pressure, blood glucose, temperature, respiration, resting heart rate, HRV, distance, nutrition, and other standard Health Connect records
 - optional Android app foreground-usage totals
+
+The Android client has a central catalog for all 41 standard record classes in Health Connect 1.1.0. The home screen remains a curated overview; authorized records without a home card are still uploaded and can be discovered and queried through MCP. Personal Health Record/FHIR resources are outside this release.
 
 Data availability depends on what the wearable's companion app or Health Sync writes into Health Connect. The reference setup is Huawei Band 10 with Huawei Health and Health Sync; other devices can work when they populate compatible Health Connect records.
 
@@ -41,6 +44,7 @@ For ordinary daily questions, MCP clients can request one normalized summary ins
 
 - Health data is read only. The project does not edit Health Connect records.
 - Health categories are independent. Granting only sleep uploads only sleep; denying oxygen or menstrual access does not block already authorized steps, heart rate, or other categories.
+- Dashboard cards are not an upload allowlist. Authorized standard records are bridged even when they have no dedicated home card.
 - The server is self-hosted and MCP credentials are independently revocable.
 - Reader audit records the named credential, query time, requested categories/range, and a bounded result summary.
 - Reader names are configured by the server owner; no private assistant name is built in.

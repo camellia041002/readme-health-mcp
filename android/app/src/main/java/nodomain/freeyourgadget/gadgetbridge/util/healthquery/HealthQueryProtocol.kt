@@ -181,6 +181,16 @@ object HealthQueryPayloadMapper {
                     .put("durationDays", days.takeIf { it > 0 } ?: 1L)))
             }
         }
+        day.body.optJSONArray("health_connect_records")?.let { records ->
+            for (i in 0 until records.length()) {
+                val record = records.optJSONObject(i) ?: continue
+                val type = record.optString("record_type")
+                val id = record.optString("record_id")
+                val payload = record.optJSONObject("payload")
+                if (type.isBlank() || id.isBlank() || payload == null) continue
+                out.put(envelope(type, id, payload))
+            }
+        }
         day.body.optJSONArray("screen_time")?.let { apps ->
             for (i in 0 until apps.length()) {
                 val app = apps.optJSONObject(i) ?: continue

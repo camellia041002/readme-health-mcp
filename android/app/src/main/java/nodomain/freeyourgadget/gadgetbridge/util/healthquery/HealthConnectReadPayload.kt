@@ -20,6 +20,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import nodomain.freeyourgadget.gadgetbridge.util.selfhostedhealth.SelfHostedHealthDay
 import org.json.JSONArray
 import org.json.JSONObject
+import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -35,6 +36,7 @@ import java.time.format.DateTimeFormatter
 object HealthConnectReadPayload {
     private const val MAX_DAYS = 30L
     private const val PAGE_SIZE = 1000
+    private val LOG = LoggerFactory.getLogger(HealthConnectReadPayload::class.java)
 
     suspend fun build(
         client: HealthConnectClient,
@@ -138,7 +140,8 @@ object HealthConnectReadPayload {
         }
 
         if (canRead<MenstruationPeriodRecord>(grantedPermissions)) {
-            readAll(client, MenstruationPeriodRecord::class.java.kotlin, from, to).forEach { record ->
+            val cycleFrom = to.minusSeconds(90L * 24L * 60L * 60L)
+            readAll(client, MenstruationPeriodRecord::class.java.kotlin, minOf(from, cycleFrom), to).forEach { record ->
                 val day = record.startTime.atZone(zone).toLocalDate()
                 val array = body(bodies, day).optJSONArray("menstruation_periods")
                     ?: JSONArray().also { body(bodies, day).put("menstruation_periods", it) }
@@ -148,6 +151,34 @@ object HealthConnectReadPayload {
                     .put("duration_days", java.time.Duration.between(record.startTime, record.endTime).toDays().coerceAtLeast(1)))
             }
         }
+
+        HealthConnectRecordCatalog.entries
+            .asSequence()
+            .filterNot { it.type in HealthConnectRecordCatalog.curatedTypes }
+            .filter { it.permission in grantedPermissions }
+            .forEach { entry ->
+                val recordFrom = if (entry.lookbackDays > MAX_DAYS) {
+                    minOf(from, to.minusSeconds(entry.lookbackDays * 24L * 60L * 60L))
+                } else from
+                val records = try {
+                    readAllUntyped(client, entry.type, recordFrom, to)
+                } catch (e: SecurityException) {
+                    LOG.info("Health Connect permission changed while reading {}", entry.type.simpleName)
+                    emptyList()
+                } catch (e: Exception) {
+                    LOG.warn("Health Connect record read failed for {} ({})", entry.type.simpleName, e.javaClass.simpleName)
+                    emptyList()
+                }
+                records.forEach { record ->
+                    val serialized = HealthConnectRecordSerializer.serialize(record, zone)
+                    val array = body(bodies, serialized.day).optJSONArray("health_connect_records")
+                        ?: JSONArray().also { body(bodies, serialized.day).put("health_connect_records", it) }
+                    array.put(JSONObject()
+                        .put("record_type", serialized.recordType)
+                        .put("record_id", serialized.recordId)
+                        .put("payload", serialized.payload))
+                }
+            }
 
         return bodies.entries.filter { it.value.length() > 1 }
             .map { SelfHostedHealthDay(it.key.toString(), it.value) }
@@ -175,6 +206,19 @@ object HealthConnectReadPayload {
         } while (token != null)
         return out
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun readAllUntyped(
+        client: HealthConnectClient,
+        type: kotlin.reflect.KClass<out androidx.health.connect.client.records.Record>,
+        from: Instant,
+        to: Instant
+    ): List<androidx.health.connect.client.records.Record> = readAll(
+        client,
+        type as kotlin.reflect.KClass<androidx.health.connect.client.records.Record>,
+        from,
+        to
+    )
 
     internal fun dedupeSleep(records: List<SleepSessionRecord>): List<SleepSessionRecord> {
         val sorted = records.sortedWith(compareBy<SleepSessionRecord> { it.startTime }.thenBy { it.endTime })

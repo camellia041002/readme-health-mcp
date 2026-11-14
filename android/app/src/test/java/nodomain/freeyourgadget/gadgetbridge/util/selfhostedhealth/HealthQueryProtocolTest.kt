@@ -2,6 +2,10 @@ package nodomain.freeyourgadget.gadgetbridge.util.selfhostedhealth
 
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.metadata.Metadata
+import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthConnectRecordCatalog
+import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthConnectRecordSerializer
 import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthQueryPairingParser
 import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthConnectHealthQuerySync
 import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthQueryPayloadMapper
@@ -12,6 +16,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
+import java.time.Instant
 import java.time.ZonedDateTime
 
 class HealthQueryProtocolTest {
@@ -86,6 +91,34 @@ class HealthQueryProtocolTest {
         assertTrue(HealthConnectHealthQuerySync.hasUsablePermission(setOf(
             HealthPermission.getReadPermission(OxygenSaturationRecord::class)
         )))
+    }
+
+    @Test
+    fun genericCatalogRecordsRemainQueryableWithoutDashboardCards() {
+        assertEquals(41, HealthConnectRecordCatalog.entries.size)
+        assertTrue(HealthConnectRecordCatalog.readPermissions.size >= 35)
+
+        val record = RestingHeartRateRecord(
+            Instant.parse("2026-11-05T08:00:00Z"),
+            null,
+            61,
+            Metadata.manualEntry()
+        )
+        val serialized = HealthConnectRecordSerializer.serialize(record, ZoneId.of("Asia/Shanghai"))
+        val body = JSONObject().put("date", serialized.day.toString())
+            .put("health_connect_records", JSONArray().put(JSONObject()
+                .put("record_type", serialized.recordType)
+                .put("record_id", serialized.recordId)
+                .put("payload", serialized.payload)))
+        val request = HealthQueryPayloadMapper.buildRequest(
+            listOf(SelfHostedHealthDay(serialized.day.toString(), body)),
+            ZoneId.of("Asia/Shanghai"),
+            "device-1"
+        )
+        val envelope = request.getJSONArray("records").getJSONObject(0)
+        assertEquals("RestingHeartRateRecord", envelope.getString("record_type"))
+        assertEquals(61, envelope.getJSONObject("payload").getInt("beatsPerMinute"))
+        assertTrue(envelope.getString("record_id").startsWith("readme-restingheartraterecord-"))
     }
 
     @Test

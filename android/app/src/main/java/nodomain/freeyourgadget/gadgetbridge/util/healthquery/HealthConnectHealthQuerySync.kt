@@ -5,14 +5,6 @@
 package nodomain.freeyourgadget.gadgetbridge.util.healthquery
 
 import android.content.Context
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.MenstruationPeriodRecord
-import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.StepsRecord
 import kotlinx.coroutines.runBlocking
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.util.ScreenTimeSummary
@@ -33,15 +25,7 @@ object HealthConnectHealthQuerySync {
     private const val LOOK_BACK_SECONDS = 24L * 60L * 60L
     private val LOG = LoggerFactory.getLogger(HealthConnectHealthQuerySync::class.java)
 
-    internal val uploadReadPermissions = setOf(
-        HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(HeartRateRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
-        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
-        HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
-    )
+    internal val uploadReadPermissions = HealthConnectRecordCatalog.readPermissions
 
     internal fun hasUsablePermission(granted: Set<String>): Boolean =
         granted.any { it in uploadReadPermissions }
