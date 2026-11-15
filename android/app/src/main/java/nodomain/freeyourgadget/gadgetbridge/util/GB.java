@@ -128,7 +128,7 @@ public class GB {
 
             NotificationChannel channelConnectionStatus = new NotificationChannel(
                     NOTIFICATION_CHANNEL_ID_CONNECTION_STATUS,
-                    context.getString(R.string.notification_channel_connection_status_name),
+                    context.getString(R.string.readme_background_notification_channel),
                     NotificationManager.IMPORTANCE_LOW);
             notificationManager.createNotificationChannel(channelConnectionStatus);
 
@@ -202,8 +202,9 @@ public class GB {
     public static Notification createNotification(List<GBDevice> devices, Context context) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID_CONNECTION_STATUS);
         if (devices.isEmpty()){
-            builder.setContentTitle(context.getString(R.string.info_no_devices_connected))
-                    .setSmallIcon(R.drawable.ic_notification_disconnected)
+            builder.setContentTitle(context.getString(R.string.readme_background_notification_title))
+                    .setContentText(context.getString(R.string.readme_background_notification_text))
+                    .setSmallIcon(R.drawable.ic_readme_notification)
                     .setContentIntent(getContentIntent(context))
                     .setShowWhen(false)
                     .setOngoing(true);

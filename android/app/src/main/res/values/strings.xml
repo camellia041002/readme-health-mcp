@@ -12,6 +12,9 @@
     <string name="readme_home_greeting">Your day</string>
     <string name="readme_home_subtitle">Body, habits, and the signals worth noticing.</string>
     <string name="readme_sync_title">ReadMe sync</string>
+    <string name="readme_background_notification_title">ReadMe background sync</string>
+    <string name="readme_background_notification_text">Read-only Health Connect sync is enabled</string>
+    <string name="readme_background_notification_channel">ReadMe background sync</string>
     <string name="screen_time_title">Today’s screen time</string>
     <string name="screen_time_grant_access">Allow usage access</string>
     <string name="screen_time_permission_detail">Local access is needed to calculate app foreground time. Screen contents are never read.</string>

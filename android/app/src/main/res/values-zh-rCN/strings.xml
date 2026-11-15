@@ -12,6 +12,9 @@
     <string name="readme_home_greeting">今天</string>
     <string name="readme_home_subtitle">身体、习惯，以及值得留意的变化。</string>
     <string name="readme_sync_title">ReadMe 同步</string>
+    <string name="readme_background_notification_title">ReadMe 后台同步</string>
+    <string name="readme_background_notification_text">Health Connect 只读同步已启用</string>
+    <string name="readme_background_notification_channel">ReadMe 后台同步</string>
     <string name="screen_time_title">今日屏幕使用</string>
     <string name="screen_time_grant_access">开启使用情况访问权限</string>
     <string name="screen_time_permission_detail">需要本地权限计算应用前台时长，不会读取屏幕内容。</string>

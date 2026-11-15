@@ -1,6 +1,12 @@
 # Project status
 
-Updated: 2026-11-15
+Updated: 2026-11-16
+
+## 2026-11-16 · v1.0.3 ReadMe background notification
+
+- The Android foreground-service notification no longer presents ReadMe's intentional no-device state as a connection failure.
+- The notification channel, title, explanatory text, and small icon now describe ReadMe's read-only Health Connect background sync and use a simple monochrome heart instead of the inherited disconnected-device icon.
+- Background-service behavior is unchanged. `assembleMainlineDebug` passes; this remains source candidate 1.0.3 (4), and the existing signed v1.0.2 release and tag are unchanged.
 
 ## 2026-11-15 · v1.0.3 pagination-safe latest cards
 
