@@ -1,6 +1,12 @@
 # Project status
 
-Updated: 2026-11-14
+Updated: 2026-11-15
+
+## 2026-11-15 · v1.0.3 pagination-safe latest cards
+
+- Android home-card lookups now ask Health Connect for the newest record first and return only that record. Oxygen history exceeding the default 1,000-record page no longer makes the card display an older page boundary.
+- The same helper covers heart rate, sleep, steps, oxygen, and menstrual-period latest-card lookups, while the upload path retains its existing complete pagination.
+- The targeted regression test and `assembleMainlineDebug` pass. This remains source candidate 1.0.3 (4); the existing signed v1.0.2 release and tag are unchanged.
 
 ## 2026-11-14 · v1.0.3 exact-day dashboard selection
 

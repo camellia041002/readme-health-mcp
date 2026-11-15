@@ -5,9 +5,11 @@
 package nodomain.freeyourgadget.gadgetbridge.util.healthquery
 
 import android.content.Context
+import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
@@ -68,13 +70,9 @@ data class HealthConnectDashboardSnapshot(
             val sleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
             val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
             val latestHeartSample = if (heartPermission in granted) runCatching {
-                client.readRecords(
-                    ReadRecordsRequest(
-                        HeartRateRecord::class,
-                        TimeRangeFilter.between(now.minusSeconds(7L * 86400L), now),
-                        pageSize = 1000
-                    )
-                ).records.flatMap { it.samples }.maxByOrNull { it.time }
+                readLatest(client, HeartRateRecord::class, now.minusSeconds(7L * 86400L), now)
+                    ?.samples
+                    ?.maxByOrNull { it.time }
             }.getOrNull() else null
             val heartTime = latestHeartSample?.time?.atZone(zone)?.toOffsetDateTime()?.toString().orEmpty()
             val displayTime = runCatching {
@@ -84,36 +82,22 @@ data class HealthConnectDashboardSnapshot(
                 OffsetDateTime.parse(heartTime).atZoneSameInstant(zone).format(DATE_TIME_FORMAT)
             }.getOrDefault("")
             val latestSleep = if (sleepPermission in granted) runCatching {
-                client.readRecords(
-                    ReadRecordsRequest(
-                        SleepSessionRecord::class,
-                        TimeRangeFilter.between(now.minusSeconds(7L * 86400L), now),
-                        pageSize = 1000
-                    )
-                ).records.maxByOrNull { it.endTime }
+                readLatest(client, SleepSessionRecord::class, now.minusSeconds(7L * 86400L), now)
             }.getOrNull() else null
             val sleepSeconds = latestSleep?.let { java.time.Duration.between(it.startTime, it.endTime).seconds } ?: 0L
             val sleepStart = latestSleep?.startTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
             val sleepEnd = latestSleep?.endTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
             val sleepDate = latestSleep?.endTime?.atZone(zone)?.format(DATE_FORMAT).orEmpty()
             val latestSteps = if (stepsPermission in granted) runCatching {
-                client.readRecords(
-                    ReadRecordsRequest(
-                        StepsRecord::class,
-                        TimeRangeFilter.between(start, now),
-                        pageSize = 1000
-                    )
-                ).records.maxByOrNull { it.endTime }
+                readLatest(client, StepsRecord::class, start, now)
             }.getOrNull() else null
             val oxygenPermission = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
             val periodPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
             val oxygen = if (oxygenPermission in granted) runCatching {
-                client.readRecords(ReadRecordsRequest(OxygenSaturationRecord::class, TimeRangeFilter.between(now.minusSeconds(30L * 86400L), now), pageSize = 1000))
-                    .records.maxByOrNull { it.time }
+                readLatest(client, OxygenSaturationRecord::class, now.minusSeconds(30L * 86400L), now)
             }.getOrNull() else null
             val period = if (periodPermission in granted) runCatching {
-                client.readRecords(ReadRecordsRequest(MenstruationPeriodRecord::class, TimeRangeFilter.between(now.minusSeconds(180L * 86400L), now), pageSize = 1000))
-                    .records.maxByOrNull { it.startTime }
+                readLatest(client, MenstruationPeriodRecord::class, now.minusSeconds(180L * 86400L), now)
             }.getOrNull() else null
             HealthConnectDashboardSnapshot(
                 available = true,
@@ -140,6 +124,24 @@ data class HealthConnectDashboardSnapshot(
 
         internal fun selectDay(days: List<SelfHostedHealthDay>, date: java.time.LocalDate): SelfHostedHealthDay? =
             days.firstOrNull { it.date == date.toString() }
+
+        internal fun <T : Record> latestRequest(
+            type: kotlin.reflect.KClass<T>,
+            from: Instant,
+            to: Instant
+        ): ReadRecordsRequest<T> = ReadRecordsRequest(
+            recordType = type,
+            timeRangeFilter = TimeRangeFilter.between(from, to),
+            ascendingOrder = false,
+            pageSize = 1
+        )
+
+        private suspend fun <T : Record> readLatest(
+            client: HealthConnectClient,
+            type: kotlin.reflect.KClass<T>,
+            from: Instant,
+            to: Instant
+        ): T? = client.readRecords(latestRequest(type, from, to)).records.firstOrNull()
 
         private fun formatClock(value: String, zone: ZoneId): String = runCatching {
             OffsetDateTime.parse(value).atZoneSameInstant(zone).toLocalTime().withSecond(0).withNano(0).toString()
