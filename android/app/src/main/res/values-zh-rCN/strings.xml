@@ -27,7 +27,7 @@
     <string name="bottom_nav_screen_time">屏幕</string>
     <string name="readme_today_choose_date">选择日期：今天</string>
     <string name="readme_card_sleep">睡眠</string>
-    <string name="readme_card_steps">今日步数</string>
+    <string name="readme_card_steps">步数</string>
     <string name="readme_card_heart">心脏健康</string>
     <string name="readme_card_cycle">生理周期</string>
     <string name="readme_card_emotion">情绪健康</string>
@@ -54,7 +54,7 @@
     <string name="readme_sleep_value">%1$d 小时 %2$d 分</string>
     <string name="readme_sleep_range">入睡 %1$s\n醒来 %2$s</string>
     <string name="readme_steps_value">%1$,d 步</string>
-    <string name="readme_steps_missing_hint">Health Connect 暂无步数记录</string>
+    <string name="readme_steps_missing_hint">最近30天暂无步数记录</string>
     <string name="readme_heart_value">%1$d 次/分</string>
     <string name="readme_workout_value">%1$d 次</string>
     <string name="readme_no_workout_today">今天没有运动</string>
@@ -69,7 +69,7 @@
     <string name="heartbeat_upload_status">云端：%1$s</string>
     <string name="heartbeat_upload_never">云端：尚未上传</string>
     <string name="heartbeat_retention_unknown">数据来源：Health Connect</string>
-    <string name="heartbeat_data_latest">数据来源：Health Connect · 今日已读取至 %1$s</string>
+    <string name="heartbeat_data_latest">数据来源：Health Connect · 最近读取至 %1$s</string>
     <string name="reader_access_title">谁看过</string>
     <string name="reader_access_loading">正在读取访问记录…</string>
     <string name="reader_access_empty">还没有读取记录</string>

@@ -2,6 +2,18 @@
 
 Updated: 2026-11-16
 
+## 2026-11-16 · 本地候选收口
+
+- v1.0.3 的最新步数回退候选已收进本地分支 `codex/readme-v1.0.3-candidate-20261116`；定向单测和 `assembleMainlineDebug` 通过。
+- 本轮没有创建发布、标签或 APK，也没有推送公开仓库；现有 v1.0.2 公开版本保持不变。
+
+## 2026-11-16 · v1.0.3 latest-step fallback candidate
+
+- The Android step card searches the latest 30 days for the newest real step record and aggregates that record's full local day. A missing first record after midnight no longer hides the previous valid step total.
+- Transient Health Connect initialization or category-read failures retain the last successful in-memory card values instead of replacing them with empty placeholders; revoked permissions still clear their categories.
+- Dashboard source copy now includes an absolute latest-record date and time instead of saying `today` across midnight.
+- The targeted regression test and `assembleMainlineDebug` pass in both the private and public Android trees. This remains source candidate 1.0.3 (4); the existing signed v1.0.2 release and tag are unchanged.
+
 ## 2026-11-16 · v1.0.3 ReadMe background notification
 
 - The Android foreground-service notification no longer presents ReadMe's intentional no-device state as a connection failure.

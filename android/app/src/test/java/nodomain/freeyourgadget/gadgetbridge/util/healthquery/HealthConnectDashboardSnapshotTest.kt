@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 class HealthConnectDashboardSnapshotTest {
     @Test
@@ -40,5 +41,20 @@ class HealthConnectDashboardSnapshotTest {
 
         assertFalse(request.ascendingOrder)
         assertEquals(1, request.pageSize)
+    }
+
+    @Test
+    fun `step fallback searches history and aggregates the latest record day`() {
+        val now = Instant.parse("2026-11-16T00:40:00Z")
+        val latestRecord = Instant.parse("2026-11-15T15:33:00Z")
+        val zone = ZoneId.of("Asia/Shanghai")
+
+        val lookup = HealthConnectDashboardSnapshot.stepLookupRange(now)
+        val day = HealthConnectDashboardSnapshot.stepDayRange(latestRecord, now, zone)
+
+        assertEquals(Instant.parse("2026-10-17T00:40:00Z"), lookup.first)
+        assertEquals(now, lookup.second)
+        assertEquals(Instant.parse("2026-11-14T16:00:00Z"), day.first)
+        assertEquals(Instant.parse("2026-11-15T16:00:00Z"), day.second)
     }
 }

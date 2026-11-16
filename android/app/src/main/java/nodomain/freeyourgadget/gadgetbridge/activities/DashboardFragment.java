@@ -390,10 +390,10 @@ public class DashboardFragment extends Fragment implements MenuProvider {
         addReadMeCard(R.string.readme_card_spo2,
                 snapshot.getLatestOxygen() > 0 ? String.format(java.util.Locale.getDefault(), "%.0f%%", snapshot.getLatestOxygen()) : getString(R.string.readme_not_synced),
                 snapshot.getLatestOxygenDateTime().isEmpty() ? getString(R.string.readme_card_spo2_hint) : snapshot.getLatestOxygenDateTime());
-        if (snapshot.getLatestHeartRateTime().isEmpty()) {
+        if (snapshot.getLatestHeartRateDateTime().isEmpty()) {
             retentionStatus.setText(R.string.heartbeat_retention_unknown);
         } else {
-            retentionStatus.setText(getString(R.string.heartbeat_data_latest, snapshot.getLatestHeartRateTime()));
+            retentionStatus.setText(getString(R.string.heartbeat_data_latest, snapshot.getLatestHeartRateDateTime()));
         }
     }
 
