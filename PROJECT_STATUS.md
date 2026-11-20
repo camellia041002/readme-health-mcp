@@ -2,11 +2,11 @@
 
 Updated: 2026-11-20
 
-## 2026-11-20 · v1.0.3 sanitized public source update
+## 2026-11-20 · v1.0.3 sanitized public release
 
 - The Android dashboard now totals every distinct sleep session ending on the latest sleep date. Multiple main-sleep/nap segments open a text-only detail screen with each interval, duration, and available stage totals.
 - Reader audit sorts newest-first, groups by date → configured reader → same-minute query, keeps today expanded, folds historical dates, and uses stable generic identity colors. No private reader name or production mapping is built into the public source.
-- The previously prepared latest-valid-step fallback is included in the same public source update. The signed v1.0.2 release and tag remain unchanged; this is source version 1.0.3 (4), not a new APK release.
+- The previously prepared latest-valid-step fallback is included in the same public release. Version 1.0.3 (4) is built only from the sanitized public tag and signed with the same dedicated public certificate as v1.0.2, so existing public installs can upgrade in place.
 
 ## 2026-11-16 · 本地候选收口
 
