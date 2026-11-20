@@ -368,11 +368,33 @@ public class DashboardFragment extends Fragment implements MenuProvider {
         final String sleepValue = sleepMinutes > 0
                 ? getString(R.string.readme_sleep_value, sleepMinutes / 60, sleepMinutes % 60)
                 : getString(R.string.readme_not_synced);
-        final String sleepTimes = snapshot.getSleepStartTime().isEmpty() || snapshot.getSleepEndTime().isEmpty()
-                ? ""
-                : getString(R.string.readme_sleep_range, snapshot.getSleepStartTime(), snapshot.getSleepEndTime());
-        addReadMeCard(R.string.readme_card_sleep, sleepValue,
-                snapshot.getLatestSleepDate().isEmpty() ? selectedDate() : snapshot.getLatestSleepDate(), sleepTimes);
+        final int sleepSessionCount = snapshot.getSleepSessionCount();
+        final String sleepDate = snapshot.getLatestSleepDate().isEmpty() ? selectedDate() : snapshot.getLatestSleepDate();
+        final String sleepFooterLeft = sleepSessionCount > 1
+                ? sleepDate + " · " + getString(R.string.readme_sleep_segments_short, sleepSessionCount)
+                : sleepDate;
+        final java.util.List<String> sleepRanges = snapshot.getSleepRanges();
+        final String sleepTimes;
+        if (sleepRanges.isEmpty()) {
+            sleepTimes = "";
+        } else if (sleepRanges.size() == 1) {
+            sleepTimes = getString(R.string.readme_sleep_range,
+                    snapshot.getSleepStartTime(), snapshot.getSleepEndTime());
+        } else if (sleepRanges.size() == 2) {
+            sleepTimes = sleepRanges.get(0) + " · " + sleepRanges.get(1);
+        } else {
+            sleepTimes = sleepRanges.get(0) + " · " + getString(
+                    R.string.readme_sleep_more_segments, sleepRanges.size() - 1);
+        }
+        final MaterialCardView sleepCard;
+        if (sleepSessionCount > 1) {
+            sleepCard = addReadMeCard(R.string.readme_card_sleep, sleepValue, sleepFooterLeft);
+        } else {
+            sleepCard = addReadMeCard(R.string.readme_card_sleep, sleepValue, sleepFooterLeft, sleepTimes);
+        }
+        sleepCard.setClickable(true);
+        sleepCard.setFocusable(true);
+        sleepCard.setOnClickListener(view -> startActivity(new Intent(requireContext(), SleepDetailActivity.class)));
         final String heartValue = snapshot.getLatestHeartRate() > 0
                 ? getString(R.string.readme_heart_value, snapshot.getLatestHeartRate())
                 : getString(R.string.readme_not_synced);
@@ -413,19 +435,19 @@ public class DashboardFragment extends Fragment implements MenuProvider {
         });
     }
 
-    private void addReadMeCard(int titleRes, String value, int hintRes) {
-        addReadMeCard(titleRes, value, selectedDate() + " · " + getString(hintRes));
+    private MaterialCardView addReadMeCard(int titleRes, String value, int hintRes) {
+        return addReadMeCard(titleRes, value, selectedDate() + " · " + getString(hintRes));
     }
 
     private String selectedDate() {
         return DateTimeUtils.formatDate(day.getTime(), DateUtils.FORMAT_SHOW_DATE);
     }
 
-    private void addReadMeCard(int titleRes, String value, String hintText) {
-        addReadMeCard(titleRes, value, hintText, "");
+    private MaterialCardView addReadMeCard(int titleRes, String value, String hintText) {
+        return addReadMeCard(titleRes, value, hintText, "");
     }
 
-    private void addReadMeCard(int titleRes, String value, String footerLeft, String footerRight) {
+    private MaterialCardView addReadMeCard(int titleRes, String value, String footerLeft, String footerRight) {
         final float density = getResources().getDisplayMetrics().density;
         final MaterialCardView card = new MaterialCardView(requireContext());
         card.setRadius(20 * density);
@@ -493,6 +515,7 @@ public class DashboardFragment extends Fragment implements MenuProvider {
         params.setMargins(margin, margin, margin, margin);
         card.setLayoutParams(params);
         gridLayout.addView(card);
+        return card;
     }
 
     private void drawLegacyWidgetsUnused() {

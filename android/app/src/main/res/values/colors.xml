@@ -8,6 +8,9 @@
     <color name="primarydark_dark" type="color">#8F3937</color>
 
     <color name="accent" type="color">#C96442</color>
+    <color name="reader_primary" type="color">#C96442</color>
+    <color name="reader_secondary" type="color">#789890</color>
+    <color name="reader_other" type="color">#8A867C</color>
     <color name="heartbeat_background" type="color">#FAF9F5</color>
     <color name="heartbeat_surface" type="color">#FFFFFF</color>
     <color name="heartbeat_panel" type="color">#F0EEE6</color>

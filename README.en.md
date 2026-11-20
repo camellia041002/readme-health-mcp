@@ -40,6 +40,8 @@ Data availability depends on what the wearable's companion app or Health Sync wr
 
 For ordinary daily questions, MCP clients can request one normalized summary instead of joining several low-level records. The summary includes available sleep-stage durations and percentages, vitals, activity, workouts, optional menstrual periods, and optional screen time; Android numeric sleep and exercise codes are translated into stable names.
 
+When one day contains a main sleep and one or more naps, the home card totals all distinct sessions for that day. A text-only detail screen lists every interval, duration, and available deep/light/REM/awake totals without inventing a chart for data the source did not provide.
+
 ## Privacy model
 
 - Health data is read only. The project does not edit Health Connect records.
@@ -48,6 +50,7 @@ For ordinary daily questions, MCP clients can request one normalized summary ins
 - The server is self-hosted and MCP credentials are independently revocable.
 - Reader audit records the named credential, query time, requested categories/range, and a bounded result summary.
 - Reader names are configured by the server owner; no private assistant name is built in.
+- Reader audit groups events by date, configured reader, and same-minute query. Identity dots use a stable generic color derived from the configured name and do not encode preset people.
 - Screen-time access is optional and does not read screen contents.
 
 ## Repository layout

@@ -22,8 +22,21 @@ import nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectClie
 import nodomain.freeyourgadget.gadgetbridge.util.selfhostedhealth.SelfHostedHealthDay
 import org.json.JSONObject
 import java.time.Instant
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
+
+data class DashboardSleepSession(
+    val startTime: String,
+    val endTime: String,
+    val asleepMinutes: Long,
+    val deepMinutes: Long,
+    val lightMinutes: Long,
+    val remMinutes: Long,
+    val awakeMinutes: Long,
+    val nap: Boolean,
+    val hasStageDetails: Boolean
+)
 
 data class HealthConnectDashboardSnapshot(
     val available: Boolean,
@@ -41,7 +54,10 @@ data class HealthConnectDashboardSnapshot(
     val latestHeartRateDateTime: String = "",
     val latestOxygenDateTime: String = "",
     val latestSleepDate: String = "",
-    val latestStepsDateTime: String = ""
+    val latestStepsDateTime: String = "",
+    val sleepSessionCount: Int = 0,
+    val sleepRanges: List<String> = emptyList(),
+    val sleepSessions: List<DashboardSleepSession> = emptyList()
 ) {
     companion object {
         @Volatile private var cache: HealthConnectDashboardSnapshot? = null
@@ -84,13 +100,32 @@ data class HealthConnectDashboardSnapshot(
                 OffsetDateTime.parse(heartTime).atZoneSameInstant(zone).format(DATE_TIME_FORMAT)
             }.getOrDefault("")
             val sleepResult = if (sleepPermission in granted) runCatching {
-                readLatest(client, SleepSessionRecord::class, now.minusSeconds(7L * 86400L), now)
+                val records = readAllSleep(client, now.minusSeconds(7L * 86400L), now)
+                summarizeLatestSleepDay(records.map(::toSleepSpan), zone)
             } else Result.success(null)
             val latestSleep = sleepResult.getOrNull()
-            val sleepSeconds = latestSleep?.let { java.time.Duration.between(it.startTime, it.endTime).seconds } ?: 0L
-            val sleepStart = latestSleep?.startTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
-            val sleepEnd = latestSleep?.endTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
-            val sleepDate = latestSleep?.endTime?.atZone(zone)?.format(DATE_FORMAT).orEmpty()
+            val sleepSeconds = latestSleep?.totalSeconds ?: 0L
+            val sleepStart = latestSleep?.sessions?.minByOrNull { it.startTime }
+                ?.startTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
+            val sleepEnd = latestSleep?.sessions?.maxByOrNull { it.endTime }
+                ?.endTime?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString().orEmpty()
+            val sleepDate = latestSleep?.date?.format(DATE_FORMAT).orEmpty()
+            val sleepRanges = latestSleep?.sessions.orEmpty().sortedBy { it.startTime }.map {
+                "${formatClock(it.startTime, zone)}–${formatClock(it.endTime, zone)}"
+            }
+            val sleepSessions = latestSleep?.sessions.orEmpty().sortedBy { it.startTime }.map {
+                DashboardSleepSession(
+                    startTime = formatClock(it.startTime, zone),
+                    endTime = formatClock(it.endTime, zone),
+                    asleepMinutes = it.asleepSeconds / 60L,
+                    deepMinutes = it.deepSeconds / 60L,
+                    lightMinutes = it.lightSeconds / 60L,
+                    remMinutes = it.remSeconds / 60L,
+                    awakeMinutes = it.awakeSeconds / 60L,
+                    nap = isNap(it, zone),
+                    hasStageDetails = it.hasStageDetails
+                )
+            }
             val stepsResult = if (stepsPermission in granted) runCatching {
                 readLatestStepTotal(client, now, zone)
             } else Result.success(null)
@@ -176,6 +211,21 @@ data class HealthConnectDashboardSnapshot(
                     stepsPermission !in granted -> ""
                     stepsResult.isFailure -> previous?.latestStepsDateTime.orEmpty()
                     else -> latestSteps?.latestRecordTime?.atZone(zone)?.format(DATE_TIME_FORMAT).orEmpty()
+                },
+                sleepSessionCount = when {
+                    sleepPermission !in granted -> 0
+                    sleepResult.isFailure -> previous?.sleepSessionCount ?: 0
+                    else -> latestSleep?.sessions?.size ?: 0
+                },
+                sleepRanges = when {
+                    sleepPermission !in granted -> emptyList()
+                    sleepResult.isFailure -> previous?.sleepRanges.orEmpty()
+                    else -> sleepRanges
+                },
+                sleepSessions = when {
+                    sleepPermission !in granted -> emptyList()
+                    sleepResult.isFailure -> previous?.sleepSessions.orEmpty()
+                    else -> sleepSessions
                 }
             ).also { cache = it }
         }
@@ -203,6 +253,100 @@ data class HealthConnectDashboardSnapshot(
             from: Instant,
             to: Instant
         ): T? = client.readRecords(latestRequest(type, from, to)).records.firstOrNull()
+
+        private suspend fun readAllSleep(
+            client: HealthConnectClient,
+            from: Instant,
+            to: Instant
+        ): List<SleepSessionRecord> {
+            val records = mutableListOf<SleepSessionRecord>()
+            var pageToken: String? = null
+            do {
+                val response = client.readRecords(
+                    ReadRecordsRequest(
+                        recordType = SleepSessionRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(from, to),
+                        pageSize = 100,
+                        pageToken = pageToken
+                    )
+                )
+                records.addAll(response.records)
+                pageToken = response.pageToken
+            } while (pageToken != null)
+            return HealthConnectReadPayload.dedupeSleep(records)
+        }
+
+        internal data class SleepSpan(
+            val startTime: Instant,
+            val endTime: Instant,
+            val asleepSeconds: Long,
+            val deepSeconds: Long = 0L,
+            val lightSeconds: Long = 0L,
+            val remSeconds: Long = 0L,
+            val awakeSeconds: Long = 0L,
+            val hasStageDetails: Boolean = false
+        )
+
+        internal data class SleepDaySummary(
+            val date: LocalDate,
+            val totalSeconds: Long,
+            val sessions: List<SleepSpan>
+        )
+
+        internal fun summarizeLatestSleepDay(
+            sessions: List<SleepSpan>,
+            zone: ZoneId
+        ): SleepDaySummary? {
+            val latestDay = sessions.maxOfOrNull { it.endTime.atZone(zone).toLocalDate() } ?: return null
+            val daySessions = sessions
+                .filter { it.endTime.atZone(zone).toLocalDate() == latestDay }
+                .sortedBy { it.startTime }
+            return SleepDaySummary(
+                date = latestDay,
+                totalSeconds = daySessions.sumOf { it.asleepSeconds.coerceAtLeast(0L) },
+                sessions = daySessions
+            )
+        }
+
+        private fun toSleepSpan(record: SleepSessionRecord): SleepSpan {
+            var deep = 0L
+            var light = 0L
+            var rem = 0L
+            var awake = 0L
+            record.stages.forEach { stage ->
+                val seconds = java.time.Duration.between(stage.startTime, stage.endTime)
+                    .seconds.coerceAtLeast(0L)
+                when (stage.stage) {
+                    SleepSessionRecord.STAGE_TYPE_DEEP -> deep += seconds
+                    SleepSessionRecord.STAGE_TYPE_LIGHT -> light += seconds
+                    SleepSessionRecord.STAGE_TYPE_REM -> rem += seconds
+                    SleepSessionRecord.STAGE_TYPE_AWAKE,
+                    SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
+                    SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> awake += seconds
+                }
+            }
+            val stagedSleep = deep + light + rem
+            val asleep = if (stagedSleep > 0L) stagedSleep else
+                java.time.Duration.between(record.startTime, record.endTime).seconds.coerceAtLeast(0L)
+            return SleepSpan(
+                startTime = record.startTime,
+                endTime = record.endTime,
+                asleepSeconds = asleep,
+                deepSeconds = deep,
+                lightSeconds = light,
+                remSeconds = rem,
+                awakeSeconds = awake,
+                hasStageDetails = record.stages.isNotEmpty()
+            )
+        }
+
+        private fun isNap(session: SleepSpan, zone: ZoneId): Boolean {
+            val localStart = session.startTime.atZone(zone).toLocalTime()
+            val sessionSeconds = java.time.Duration.between(session.startTime, session.endTime).seconds
+            return !localStart.isBefore(java.time.LocalTime.of(6, 0)) &&
+                localStart.isBefore(java.time.LocalTime.of(18, 0)) &&
+                sessionSeconds <= 4L * 3600L
+        }
 
         internal data class LatestStepTotal(val total: Long, val latestRecordTime: Instant)
 
@@ -238,6 +382,9 @@ data class HealthConnectDashboardSnapshot(
         private fun formatClock(value: String, zone: ZoneId): String = runCatching {
             OffsetDateTime.parse(value).atZoneSameInstant(zone).toLocalTime().withSecond(0).withNano(0).toString()
         }.getOrDefault("")
+
+        private fun formatClock(value: Instant, zone: ZoneId): String =
+            value.atZone(zone).toLocalTime().withSecond(0).withNano(0).toString()
 
         private fun unavailable() = HealthConnectDashboardSnapshot(false, 0, 0, "", 0, 0, 0.0, "", "")
     }

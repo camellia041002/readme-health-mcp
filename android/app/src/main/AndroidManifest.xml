@@ -107,6 +107,11 @@
             android:exported="false"
             android:parentActivityName=".activities.ControlCenterv2"
             android:theme="@style/GadgetbridgeTheme.NoActionBar" />
+        <activity
+            android:name=".activities.SleepDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:theme="@style/GadgetbridgeTheme.NoActionBar" />
         <receiver
             android:name=".externalevents.sleepasandroid.SleepAsAndroidReceiver"
             android:enabled="true"

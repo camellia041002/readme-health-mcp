@@ -4,16 +4,20 @@
     General Public License, version 3 or later. */
 package nodomain.freeyourgadget.gadgetbridge.activities
 
+import android.graphics.drawable.GradientDrawable
 import android.graphics.Typeface
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ImageView
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthQueryConnectionStore
 import nodomain.freeyourgadget.gadgetbridge.util.healthquery.HealthQueryTransport
@@ -73,8 +77,10 @@ class ReaderAccessActivity : AppCompatActivity() {
         content.removeAllViews()
         if (events.length() == 0) { showMessage(getString(R.string.reader_access_empty)); return }
         val grouped = linkedMapOf<LocalDate, LinkedHashMap<String, LinkedHashMap<String, MutableList<JSONObject>>>>()
-        for (index in 0 until events.length()) {
-            val event = events.optJSONObject(index) ?: continue
+        val sortedEvents = (0 until events.length())
+            .mapNotNull { events.optJSONObject(it) }
+            .sortedByDescending { parseInstant(it.optString("occurred_at")) ?: Instant.EPOCH }
+        for (event in sortedEvents) {
             val reader = event.optString("reader_name", getString(R.string.reader_access_unknown))
             val instant = parseInstant(event.optString("occurred_at")) ?: Instant.EPOCH
             val local = instant.atZone(ZoneId.systemDefault())
@@ -102,7 +108,7 @@ class ReaderAccessActivity : AppCompatActivity() {
             setPadding(0, dp(8), 0, 0)
             visibility = if (date == LocalDate.now()) View.VISIBLE else View.GONE
         }
-        val readerSummary = readers.entries.joinToString("\n") { (reader, groups) -> "$reader：${groups.size}次" }
+        val readerSummary = readers.entries.joinToString(" · ") { (reader, groups) -> "$reader：${groups.size}次" }
         card.addView(foldHeader(date.format(DateTimeFormatter.ofPattern("yyyy年M月d日")), readerSummary, body, 18f))
         readers.forEach { (reader, minuteGroups) -> addReaderGroup(body, reader, minuteGroups) }
         card.addView(body)
@@ -114,27 +120,84 @@ class ReaderAccessActivity : AppCompatActivity() {
     private fun addReaderGroup(parent: LinearLayout, reader: String, minuteGroups: LinkedHashMap<String, MutableList<JSONObject>>) {
         val section = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(8), dp(8), 0, dp(10))
+            setPadding(dp(4), dp(6), 0, dp(8))
         }
-        section.addView(TextView(this).apply {
-            text = "$reader · ${minuteGroups.size}次"
-            textSize = 15f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(ContextCompat.getColor(this@ReaderAccessActivity, R.color.heartbeat_charcoal))
-            setPadding(dp(4), dp(4), 0, dp(8))
-        })
+        val queries = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), 0, 0, dp(4))
+            visibility = View.VISIBLE
+        }
+        section.addView(readerHeader(reader, minuteGroups.size, queries))
         val entries = minuteGroups.entries.toList()
-        entries.take(RECENT_QUERY_LIMIT).forEach { (_, events) -> addQueryGroup(section, events) }
+        entries.take(RECENT_QUERY_LIMIT).forEach { (_, events) -> addQueryGroup(queries, events) }
         if (entries.size > RECENT_QUERY_LIMIT) {
             val older = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 visibility = View.GONE
             }
             entries.drop(RECENT_QUERY_LIMIT).forEach { (_, events) -> addQueryGroup(older, events) }
-            section.addView(foldHeader("查看更早的 ${entries.size - RECENT_QUERY_LIMIT} 次", "", older, 13f))
-            section.addView(older)
+            queries.addView(foldHeader("查看更早的 ${entries.size - RECENT_QUERY_LIMIT} 次", "", older, 13f))
+            queries.addView(older)
         }
+        section.addView(queries)
         parent.addView(section)
+    }
+
+    private fun readerHeader(reader: String, queryCount: Int, target: View): LinearLayout {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(5), 0, dp(5))
+        }
+        row.addView(readerMarker(reader), LinearLayout.LayoutParams(dp(14), dp(14)).apply {
+            marginEnd = dp(9)
+        })
+        row.addView(TextView(this).apply {
+            text = reader
+            textSize = 15f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(ContextCompat.getColor(this@ReaderAccessActivity, R.color.heartbeat_charcoal))
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(TextView(this).apply {
+            text = getString(R.string.reader_access_query_count, queryCount)
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(this@ReaderAccessActivity, R.color.secondarytext))
+        })
+        val arrow = ImageView(this).apply {
+            setImageResource(R.drawable.ic_readme_chevron_down)
+            setColorFilter(ContextCompat.getColor(this@ReaderAccessActivity, R.color.secondarytext))
+            setPadding(dp(9), dp(9), dp(9), dp(9))
+        }
+        row.addView(arrow, LinearLayout.LayoutParams(dp(38), dp(38)).apply { marginStart = dp(4) })
+        row.setOnClickListener {
+            val opening = target.visibility != View.VISIBLE
+            target.visibility = if (opening) View.VISIBLE else View.GONE
+            arrow.setImageResource(if (opening) R.drawable.ic_readme_chevron_down else R.drawable.ic_readme_chevron_right)
+        }
+        return row
+    }
+
+    private fun readerMarker(reader: String): FrameLayout {
+        val color = ContextCompat.getColor(
+            this,
+            when {
+                reader == getString(R.string.reader_access_unknown) -> R.color.reader_other
+                (reader.hashCode() and 1) == 0 -> R.color.reader_primary
+                else -> R.color.reader_secondary
+            }
+        )
+        return FrameLayout(this).apply {
+            background = oval(ColorUtils.setAlphaComponent(color, 42))
+            addView(View(this@ReaderAccessActivity).apply {
+                background = oval(color)
+            }, FrameLayout.LayoutParams(dp(7), dp(7), Gravity.CENTER))
+            contentDescription = getString(R.string.reader_access_identity_marker, reader)
+        }
+    }
+
+    private fun oval(color: Int) = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(color)
     }
 
     private fun addQueryGroup(parent: LinearLayout, events: List<JSONObject>) {
@@ -499,7 +562,6 @@ class ReaderAccessActivity : AppCompatActivity() {
         "health_connect_records" -> "健康记录"
         else -> value
     }
-
     private fun friendlyTool(value: String): String = when (value) {
         "get_data_coverage" -> "查看数据时间范围"
         "query_records" -> "查看详细记录"

@@ -57,4 +57,32 @@ class HealthConnectDashboardSnapshotTest {
         assertEquals(Instant.parse("2026-11-14T16:00:00Z"), day.first)
         assertEquals(Instant.parse("2026-11-15T16:00:00Z"), day.second)
     }
+
+    @Test
+    fun `sleep card totals every distinct session ending on latest sleep day`() {
+        val zone = ZoneId.of("Asia/Shanghai")
+        val previousDay = HealthConnectDashboardSnapshot.Companion.SleepSpan(
+            Instant.parse("2026-11-17T15:00:00Z"),
+            Instant.parse("2026-11-17T23:00:00Z"),
+            8 * 3600L
+        )
+        val mainSleep = HealthConnectDashboardSnapshot.Companion.SleepSpan(
+            Instant.parse("2026-11-18T17:00:00Z"),
+            Instant.parse("2026-11-19T00:00:00Z"),
+            7 * 3600L
+        )
+        val nap = HealthConnectDashboardSnapshot.Companion.SleepSpan(
+            Instant.parse("2026-11-19T05:00:00Z"),
+            Instant.parse("2026-11-19T05:40:00Z"),
+            40 * 60L
+        )
+
+        val summary = HealthConnectDashboardSnapshot.summarizeLatestSleepDay(
+            listOf(previousDay, nap, mainSleep), zone
+        )
+
+        assertEquals(LocalDate.parse("2026-11-19"), summary?.date)
+        assertEquals(7 * 3600L + 40 * 60L, summary?.totalSeconds)
+        assertEquals(listOf(mainSleep, nap), summary?.sessions)
+    }
 }
