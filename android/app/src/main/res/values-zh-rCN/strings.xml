@@ -4370,7 +4370,9 @@
     <string name="pref_selfhosted_health_workouts_title">上传运动摘要</string>
     <string name="pref_selfhosted_health_workouts_summary">附加运动摘要，不含路线或位置数据。步数、心率和睡眠独立上传。</string>
     <string name="pref_selfhosted_health_sync_on_event_summary">手环送来新数据就上传，不用等下一次取数</string>
-    <string name="pref_selfhosted_health_sync_interval_title">周期上传</string>
+    <string name="pref_selfhosted_health_sync_interval_title">ReadMe 上传间隔</string>
+    <string name="pref_selfhosted_health_sync_interval_note_title">两段同步说明</string>
+    <string name="pref_selfhosted_health_sync_interval_note_summary">这里只控制 Health Connect → 服务器。Health Sync → Health Connect 由 Health Sync 单独调度，两边不会自动对齐。想尽快更新，请在 Health Sync 中开启自动同步，并在这里选择每 15 分钟。</string>
     <string name="selfhosted_health_sync_interval_off">关闭</string>
     <string name="selfhosted_health_sync_interval_15m">每 15 分钟</string>
     <string name="selfhosted_health_sync_interval_30m">每 30 分钟</string>

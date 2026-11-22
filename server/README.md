@@ -99,6 +99,19 @@ Clients that accept explicit headers can instead use a named PAT from **MCP Acce
 }
 ```
 
+### Hermes Agent
+
+[Hermes Agent](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/mcp.md) uses the same remote endpoint and needs no repo-specific adapter. Add it to `~/.hermes/config.yaml`:
+
+```yaml
+mcp_servers:
+  readme_health:
+    url: "https://health.example.com/mcp"
+    auth: oauth
+```
+
+Run `hermes mcp login readme_health`, then restart Hermes or use `/reload-mcp`. To use a named PAT instead, omit `auth: oauth` and configure the `Authorization` header shown above.
+
 The server exposes RFC 9728 protected-resource and RFC 8414 authorization-server metadata, validates `Origin`, and challenges unauthenticated clients. Credentials are limited to `health:read`, independently revocable, and audited. Raw enrollment, PAT, authorization-code, access-token, and refresh-token values are never stored.
 
 Compatibility note: Client ID Metadata Documents are preferred and supported with HTTPS-only fetching, redirect bounds, document-size limits, exact client-ID/redirect validation, and private-network SSRF rejection. Public-client Dynamic Client Registration remains available as a rate-limited compatibility fallback for Claude/Codex and older clients.

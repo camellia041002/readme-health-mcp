@@ -77,6 +77,13 @@
             app:useSimpleSummaryProvider="true" />
 
         <Preference
+            android:key="selfhosted_health_sync_interval_note"
+            android:selectable="false"
+            android:summary="@string/pref_selfhosted_health_sync_interval_note_summary"
+            android:title="@string/pref_selfhosted_health_sync_interval_note_title"
+            app:iconSpaceReserved="true" />
+
+        <Preference
             android:icon="@drawable/ic_sync"
             android:key="selfhosted_health_sync_now"
             android:summary="@string/pref_selfhosted_health_sync_now_summary"

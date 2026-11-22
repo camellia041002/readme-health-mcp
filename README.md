@@ -85,7 +85,9 @@ Android 客户端集中支持 Health Connect 1.1.0 中的 41 类标准健康记�
 
 自动更新包含两段互相独立的同步：Health Sync 先把官方健康 App 中的数据写入 Health Connect，随后 ReadMe 再把 Health Connect 中已有的数据上传到自己的服务器。前一段完成，不代表后一段已经完成。
 
-ReadMe 默认每 15 分钟安排一次后台上传，这是 Android 后台任务允许的最短周期，但并不是精确的实时计时器。手机的省电、后台限制、网络状态或“强行停止”都可能推迟或停止任务。请为官方健康 App、Health Sync 和 ReadMe 开启自启动与后台运行，并取消严格的电池限制；若 Health Sync 报告自动同步失败，也要检查它的通知权限。
+[Health Sync 官方说明](https://healthsync.app/about/)将常规同步频率描述为最频繁每 15 分钟一次；具体执行仍由 Health Sync 和 Android 调度。ReadMe 不能设置或触发 Health Sync，只能决定第二段何时读取 Health Connect。ReadMe 提供关闭、15 分钟、30 分钟、1 小时、3 小时和 6 小时六档，默认 15 分钟；15 分钟也是 Android 周期后台任务允许的最短间隔。
+
+如果希望数据尽快到达服务器，请开启 Health Sync 自动同步，并把 ReadMe 设为每 15 分钟。两个 15 分钟任务彼此独立，不会自动同时触发，端到端等待可能叠加；把 ReadMe 设得更慢不会影响数据正确性，但会增加 Health Connect 已有新数据后等待上传的时间。手机的省电、后台限制、网络状态或“强行停止”也可能继续推迟或停止任务。请为官方健康 App、Health Sync 和 ReadMe 开启自启动与后台运行，并取消严格的电池限制；若 Health Sync 报告自动同步失败，也要检查它的通知权限。
 
 卡片中的日期和时间是健康数据的实际测量时间，不是 ReadMe 最近一次上传到服务器的时间。完整检查清单和排查顺序见[安装与故障排查](docs/SETUP.zh-CN.md#自动同步与故障排查)。
 

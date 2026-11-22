@@ -35,6 +35,19 @@ docker compose up -d --build
 
 客户端支持 OAuth 时优先使用 OAuth。否则，在“MCP Access”中为每一只读取者创建单独命名的 PAT，并连接到 `https://health.example.com/mcp`。每个凭据都只能读取、可以单独撤销，它的显示名称会出现在“谁看过”中。
 
+### Hermes Agent
+
+[当前版 Hermes Agent](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/mcp.md) 原生支持远程 HTTP MCP，不需要安装本仓库为 Codex 和 Claude 提供的连接器，也不需要修改 ReadMe 服务端。在 `~/.hermes/config.yaml` 中添加同一个 `/mcp` 地址：
+
+```yaml
+mcp_servers:
+  readme_health:
+    url: "https://health.example.com/mcp"
+    auth: oauth
+```
+
+随后运行 `hermes mcp login readme_health` 完成授权，再重启 Hermes 或使用 `/reload-mcp` 重新加载。若选择 PAT，不使用上面的 `auth: oauth`，改为按 [`server/README.md`](../server/README.md#remote-mcp) 中的通用 `Authorization` 请求头方式配置。OAuth 和 PAT 只是两种授权方式，不影响 MCP 工具兼容性。
+
 ## 5. 可选的屏幕使用时间
 
 “应用使用情况访问权限”只提供各 App 在前台使用了多久，不包含截图、输入文字、通知或屏幕内容。不需要这个功能时不要授权即可。
@@ -48,12 +61,17 @@ docker compose up -d --build
 
 Health Sync 显示成功，只能证明第一段完成，不代表 ReadMe 已经执行了第二段。反过来，ReadMe 刚刚上传成功，也可能只上传了 Health Connect 中较早的测量记录。
 
-ReadMe 默认每 15 分钟安排一次后台上传。这是 Android 周期任务允许的最短间隔，但系统可能推迟执行，所以它是定时兜底，不是精确的 15 分钟实时计时器。
+[Health Sync 官方说明](https://healthsync.app/about/)其常规同步最频繁为每 15 分钟一次。这个节奏由 Health Sync 和 Android 控制，ReadMe 不能替 Health Sync 设置间隔，也不能从自身的后台任务触发 Health Sync。
+
+ReadMe 只控制第二段，提供关闭、15 分钟、30 分钟、1 小时、3 小时和 6 小时六档，默认 15 分钟。这是 Android 周期任务允许的最短间隔，但系统可能推迟执行，所以它是定时兜底，不是精确的 15 分钟实时计时器。
+
+如果希望数据尽快到达服务器，请在 Health Sync 中开启自动同步，并把 ReadMe 设为每 15 分钟。不要求两边显示相同的设置值，而且 Health Sync 未必向用户开放自定义间隔；关键是两段都在自动运行。即使两边都按 15 分钟运行，它们也是彼此独立、没有对齐起点的任务，等待时间可能叠加。例如 Health Sync 刚错过一次运行，ReadMe 随后又先于它运行，就要继续等下一轮 ReadMe。把 ReadMe 设为 30 分钟、1 小时或更久不会造成错误，但会相应增加第二段的最长计划等待时间。
 
 请在手机上逐项检查：
 
 - 为官方健康 App、Health Sync 和 ReadMe 同时开启自启动和后台运行。部分手机把“自启动”和“电池不限制”做成了两个独立开关。
 - 如果希望数据及时更新，为这三个 App 取消严格的电池优化。
+- 如果希望尽量减少延迟，确认 Health Sync 自动同步已开启，并把 ReadMe 的“ReadMe 上传间隔”设为“每 15 分钟”。
 - 如果 Health Sync 报告计划同步或前台服务失败，检查它的通知权限是否开启。
 - 不要“强行停止”链路中的任何 App。App 被强行停止后，Android 会禁止它的后台计划任务，直到用户再次手动打开该 App。
 - 确认 Health Sync 中需要的数据类型仍然开启。没有写入 Health Connect 的类别，ReadMe 无法补出来。

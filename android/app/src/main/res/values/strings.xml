@@ -5171,7 +5171,9 @@
     <string name="pref_selfhosted_health_workouts_title">Upload workout summaries</string>
     <string name="pref_selfhosted_health_workouts_summary">Include workout summaries without routes or location data. Steps, heart rate and sleep upload independently.</string>
     <string name="pref_selfhosted_health_sync_on_event_summary">Upload as soon as the band delivers new data, instead of waiting for the next fetch</string>
-    <string name="pref_selfhosted_health_sync_interval_title">Periodic upload</string>
+    <string name="pref_selfhosted_health_sync_interval_title">ReadMe upload interval</string>
+    <string name="pref_selfhosted_health_sync_interval_note_title">Two-stage sync</string>
+    <string name="pref_selfhosted_health_sync_interval_note_summary">This controls only Health Connect → server. Health Sync → Health Connect is scheduled separately by Health Sync, so the two stages are not automatically aligned. For the freshest updates, enable automatic sync in Health Sync and select every 15 minutes here.</string>
     <string name="selfhosted_health_sync_interval_off">Off</string>
     <string name="selfhosted_health_sync_interval_15m">Every 15 minutes</string>
     <string name="selfhosted_health_sync_interval_30m">Every 30 minutes</string>

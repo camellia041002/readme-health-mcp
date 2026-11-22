@@ -37,6 +37,19 @@ Android may postpone periodic work when battery saving is aggressive. Allow back
 
 Use OAuth when supported. Otherwise create a separate named PAT for each reader in **MCP Access** and connect to `https://health.example.com/mcp`. Each credential is read-only and revocable; its display name appears in reader audit.
 
+### Hermes Agent
+
+[Current Hermes Agent releases](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/mcp.md) support remote HTTP MCP natively. They do not need the repo-local Codex or Claude connector bundle, and no ReadMe server changes are required. Add the same `/mcp` endpoint to `~/.hermes/config.yaml`:
+
+```yaml
+mcp_servers:
+  readme_health:
+    url: "https://health.example.com/mcp"
+    auth: oauth
+```
+
+Run `hermes mcp login readme_health`, then restart Hermes or use `/reload-mcp`. For PAT authentication, omit `auth: oauth` and use the generic `Authorization` header form documented in [`server/README.md`](../server/README.md#remote-mcp). OAuth and PAT are authorization choices; they do not change MCP tool compatibility.
+
 ## 5. Optional screen time
 
 Usage Access reports per-app foreground duration, not screenshots, typed text, notifications, or screen contents. Leave it disabled to omit the feature.
@@ -50,12 +63,17 @@ The health path contains two separate scheduled stages:
 
 A successful Health Sync run proves only that the first stage completed. It does not prove that ReadMe has already uploaded the new records. Likewise, a recent ReadMe upload can contain older measurements when Health Connect has no newer source data.
 
-ReadMe schedules periodic upload every 15 minutes by default, the shortest interval supported by Android periodic work. Android may run it later. It is a safety net rather than an exact 15-minute timer.
+[Health Sync's documentation](https://healthsync.app/about/) describes regular synchronization as running no more often than once every 15 minutes. Health Sync and Android control that schedule; ReadMe cannot configure or trigger it.
+
+ReadMe controls only the second stage and offers Off, 15 minutes, 30 minutes, 1 hour, 3 hours, and 6 hours. The default is 15 minutes, the shortest interval supported by Android periodic work. Android may run it later, so it is a safety net rather than an exact timer.
+
+For the freshest server data, enable automatic synchronization in Health Sync and select **Every 15 minutes** under **ReadMe upload interval**. The values do not have to match, and Health Sync may not expose a user-selectable interval; what matters is that both stages are enabled. Even when both run every 15 minutes, their schedules are independent and are not phase-aligned, so their waiting time can add up. A 30-minute, 1-hour, or longer ReadMe interval remains correct but increases the second stage's maximum scheduled wait accordingly.
 
 On the phone, check all of the following:
 
 - Enable auto-start and background activity for the vendor health app, Health Sync, and ReadMe. Some Android vendors expose auto-start separately from the battery setting.
 - Remove strict battery optimization for all three apps when timely updates matter.
+- For the lowest practical delay, confirm that Health Sync automatic synchronization is enabled and set **ReadMe upload interval** to **Every 15 minutes**.
 - Keep notification permission enabled for Health Sync if that app reports scheduled-sync or foreground-service failures.
 - Do not force-stop any link in the chain. Android blocks an app's scheduled background work after a force-stop until the user opens the app again.
 - Keep Health Sync's desired data categories enabled. A category that is absent from Health Connect cannot be recovered by ReadMe.
