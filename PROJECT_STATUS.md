@@ -1,6 +1,12 @@
 # Project status
 
-Updated: 2026-11-20
+Updated: 2026-11-22
+
+## 2026-11-22 · v1.0.4 sync guidance and Hermes setup
+
+- Android settings now call the schedule the `ReadMe upload interval` and explain that it controls only Health Connect → ReadMe server uploads. The upstream wearable/vendor app → Health Connect schedule remains controlled separately by Health Sync; the two stages are independent, and 15 minutes is the recommended low-latency ReadMe setting.
+- The bilingual README, setup guide, Android guide, and server README now document the complete two-stage sync path and remote HTTP MCP setup for Hermes. Hermes uses the same deployed MCP endpoint as other MCP-compatible agents; no Hermes-specific adapter is required, while authentication remains a server/operator choice.
+- Version 1.0.4 (5) is built from the sanitized public source and signed with the same dedicated public certificate as v1.0.2 and v1.0.3, so existing public installs can upgrade in place.
 
 ## 2026-11-20 · v1.0.3 sanitized public release
 
